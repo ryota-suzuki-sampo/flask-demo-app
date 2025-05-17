@@ -102,11 +102,11 @@ def ship_detail(ship_id):
             """, (ship_id,))
             detail = cur.fetchone()
 
-            # 利息を %表示用に加工
+            # 🚨 安全に interest を %表示変換（=100倍）
             if detail:
                 detail = list(detail)
-                if detail[8] is not None:
-                    detail[8] = round(detail[8] * 100, 2)  # interest を %で返す
+                if len(detail) >= 8 and detail[7] is not None:
+                    detail[7] = round(detail[7] * 100, 2)
 
     return render_template("ship_detail.html",
                            ship_id=ship_id,
@@ -114,6 +114,7 @@ def ship_detail(ship_id):
                            currencies=currencies,
                            detail=detail,
                            edit=edit_mode)
+
 
 @app.route("/ships/<int:ship_id>/update", methods=["POST"])
 def update_ship_detail(ship_id):
