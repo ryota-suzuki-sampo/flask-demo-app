@@ -11,25 +11,28 @@ def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
 @app.route("/")
-def index():
-    return render_template("index.html")
-
-@app.route("/submit", methods=["POST"])
-def submit():
-    ship_name = request.form["ship_name"]
-    company_name = request.form["company_name"]
-    charter_type = request.form["charter_type"]
-    flag = request.form["flag"]
-    ship_type = request.form["ship_type"]
-    completion_date = request.form["completion_date"]
-
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO ships (ship_name, company_name, charter_type, flag, ship_type, completion_date)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (ship_name, company_name, charter_type, flag, ship_type, completion_date))
+def home_redirect():
     return redirect("/ships")
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        ship_name = request.form["ship_name"]
+        company_name = request.form["company_name"]
+        charter_type = request.form["charter_type"]
+        flag = request.form["flag"]
+        ship_type = request.form["ship_type"]
+        completion_date = request.form["completion_date"]
+
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO ships (ship_name, company_name, charter_type, flag, ship_type, completion_date)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (ship_name, company_name, charter_type, flag, ship_type, completion_date))
+        return redirect("/ships")
+
+    return render_template("register.html")
 
 @app.route("/ships")
 def list_ships():
@@ -200,7 +203,7 @@ def export_excel():
 
         # J列: 利息（%表示）
         if row[8] is not None:
-            cell = ws_output.cell(row=start_row, column=10, value=row[8])
+            cell = ws_output.cell(row=start_row, column=10, value=row[9])
             cell.number_format = '0.00%'
 
         start_row += 1
