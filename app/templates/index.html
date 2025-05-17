@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Railway UI Test</title>
-</head>
+<head><title>船舶登録フォーム</title></head>
 <body>
-    <h1>Hello from Railway!</h1>
+    <h1>船舶情報を登録</h1>
+    <form action="/submit" method="post">
+        <label>船名: <input type="text" name="ship_name" required></label><br>
+        <label>会社名: <input type="text" name="company_name" required></label><br>
+        <label>竣工日: <input type="date" name="completion_date" required></label><br>
+        <button type="submit">登録</button>
+    </form>
+    <p><a href="/ships">登録済み船舶一覧</a></p>
 </body>
 </html>
