@@ -31,23 +31,33 @@ def submit():
 @app.route("/ships")
 def list_ships():
     search = request.args.get("search", "")
+    sort = request.args.get("sort", "id")  # デフォルトはid
+    order = request.args.get("order", "desc")  # デフォルトは降順
+
+    # SQLインジェクション防止：許可された列・順だけ使う
+    allowed_sorts = ["id", "ship_name", "company_name", "completion_date"]
+    allowed_orders = ["asc", "desc"]
+    sort = sort if sort in allowed_sorts else "id"
+    order = order if order in allowed_orders else "desc"
+
     with get_conn() as conn:
         with conn.cursor() as cur:
             if search:
-                cur.execute("""
+                cur.execute(f"""
                     SELECT id, ship_name, company_name, charter_type, completion_date, flag, ship_type
                     FROM ships
                     WHERE ship_name ILIKE %s OR company_name ILIKE %s
-                    ORDER BY id DESC
+                    ORDER BY {sort} {order}
                 """, (f"%{search}%", f"%{search}%"))
             else:
-                cur.execute("""
+                cur.execute(f"""
                     SELECT id, ship_name, company_name, charter_type, completion_date, flag, ship_type
                     FROM ships
-                    ORDER BY id DESC
+                    ORDER BY {sort} {order}
                 """)
             ships = cur.fetchall()
-    return render_template("ships.html", ships=ships, search=search)
+    return render_template("ships.html", ships=ships, search=search, sort=sort, order=order)
+
 
 if __name__ == "__main__":
     print("Starting app on port 5000...")
