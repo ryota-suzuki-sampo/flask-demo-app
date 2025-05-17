@@ -4,9 +4,8 @@ import psycopg2
 
 app = Flask(__name__, template_folder="templates")
 
-# DB接続
-DATABASE_URL = os.environ.get("DATABASE_URL")
-conn = psycopg2.connect(DATABASE_URL)
+def get_conn():
+    return psycopg2.connect(os.environ["DATABASE_URL"])
 
 @app.route("/")
 def index():
@@ -18,19 +17,20 @@ def submit():
     company_name = request.form["company_name"]
     completion_date = request.form["completion_date"]
 
-    with conn.cursor() as cur:
-        cur.execute("""
-            INSERT INTO ships (ship_name, company_name, completion_date)
-            VALUES (%s, %s, %s)
-        """, (ship_name, company_name, completion_date))
-        conn.commit()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO ships (ship_name, company_name, completion_date)
+                VALUES (%s, %s, %s)
+            """, (ship_name, company_name, completion_date))
     return redirect("/ships")
 
 @app.route("/ships")
 def list_ships():
-    with conn.cursor() as cur:
-        cur.execute("SELECT id, ship_name, company_name, completion_date FROM ships ORDER BY id DESC")
-        ships = cur.fetchall()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, ship_name, company_name, completion_date FROM ships ORDER BY id DESC")
+            ships = cur.fetchall()
     return render_template("ships.html", ships=ships)
 
 if __name__ == "__main__":
