@@ -17,7 +17,24 @@
         <tr><th>傭船料 (/day)</th><td>{{ currencies | selectattr('0', 'equalto', d[0]) | map(attribute='1') | list | first or '' }} {{ '%.2f' | format(d[1]) if d[1] is not none else '' }}</td></tr>
         <tr><th>船舶費 (/month)</th><td>{{ currencies | selectattr('0', 'equalto', d[2]) | map(attribute='1') | list | first or '' }} {{ '%.2f' | format(d[3]) if d[3] is not none else '' }}</td></tr>
         <tr><th>元利金 (/month)</th><td>{{ currencies | selectattr('0', 'equalto', d[4]) | map(attribute='1') | list | first or '' }} {{ '%.2f' | format(d[5]) if d[5] is not none else '' }}</td></tr>
-        <tr><th>利息 (/month)</th><td>{{ currencies | selectattr('0', 'equalto', d[6]) | map(attribute='1') | list | first or '' }} {{ '%.2f' | format(d[7]) if d[7] is not none else '' }}</td></tr>
+        <tr>
+        <th>利息 (/month)</th>
+        <td>
+            {% if edit %}
+            <div class="input-group">
+                <select name="interest_currency_id" class="form-select">
+                {% for c in currencies %}
+                <option value="{{ c[0] }}" {% if detail and c[0] == detail[6] %}selected{% endif %}>{{ c[1] }}</option>
+                {% endfor %}
+                </select>
+                <input type="number" name="interest" step="0.01" class="form-control" value="{{ detail[8] if detail else '' }}">
+                <span class="input-group-text">%</span>
+            </div>
+            {% else %}
+            {{ currencies | selectattr("0", "equalto", detail[6]) | map(attribute=1) | list | first }} / {{ detail[8] if detail else '' }}%
+            {% endif %}
+        </td>
+        </tr>
     </table>
     <a href="?edit=1" class="btn btn-primary">編集</a>
     <a href="/ships" class="btn btn-secondary">← 戻る</a>
