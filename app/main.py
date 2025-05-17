@@ -1,11 +1,38 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect
+import os
+import psycopg2
 
 app = Flask(__name__, template_folder="templates")
 
+# DB接続
+DATABASE_URL = os.environ.get("DATABASE_URL")
+conn = psycopg2.connect(DATABASE_URL)
+
 @app.route("/")
-def home():
+def index():
     return render_template("index.html")
 
+@app.route("/submit", methods=["POST"])
+def submit():
+    ship_name = request.form["ship_name"]
+    company_name = request.form["company_name"]
+    completion_date = request.form["completion_date"]
+
+    with conn.cursor() as cur:
+        cur.execute("""
+            INSERT INTO ships (ship_name, company_name, completion_date)
+            VALUES (%s, %s, %s)
+        """, (ship_name, company_name, completion_date))
+        conn.commit()
+    return redirect("/ships")
+
+@app.route("/ships")
+def list_ships():
+    with conn.cursor() as cur:
+        cur.execute("SELECT id, ship_name, company_name, completion_date FROM ships ORDER BY id DESC")
+        ships = cur.fetchall()
+    return render_template("ships.html", ships=ships)
+
 if __name__ == "__main__":
-    print("Starting app on port 5000...")
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

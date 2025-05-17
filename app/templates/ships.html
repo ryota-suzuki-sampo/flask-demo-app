@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>船舶一覧</title>
+</head>
+<body>
+    <h1>登録済みの船舶一覧</h1>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>船名</th>
+            <th>会社名</th>
+            <th>竣工日</th>
+        </tr>
+        {% for id, ship_name, company_name, completion_date in ships %}
+        <tr>
+            <td>{{ id }}</td>
+            <td>{{ ship_name }}</td>
+            <td>{{ company_name }}</td>
+            <td>{{ completion_date }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <p><a href="/">← 戻る</a></p>
+</body>
+</html>
