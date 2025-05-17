@@ -36,7 +36,7 @@
         {% for ship in ships %}
         <tr>
             <td>{{ ship[0] }}</td>
-            <td>{{ ship[1] }}</td>
+            <td><a href="/ships/{{ ship[0] }}">{{ ship[1] }}</a></td>
             <td>{{ ship[2] }}</td>
             <td>{{ ship[3] }}</td>
             <td>{{ ship[4] }}</td>
@@ -46,28 +46,30 @@
         {% endfor %}
         </tbody>
     </table>
+
     <!-- 📄 ページリンク -->
     <nav aria-label="ページネーション">
-    <ul class="pagination mt-4">
+      <ul class="pagination mt-4">
         {% if page > 1 %}
         <li class="page-item">
-        <a class="page-link" href="?page={{ page - 1 }}&search={{ search }}&sort={{ sort }}&order={{ order }}">前へ</a>
+          <a class="page-link" href="?page={{ page - 1 }}&search={{ search }}&sort={{ sort }}&order={{ order }}">前へ</a>
         </li>
         {% endif %}
 
         {% for p in range(1, total_pages + 1) %}
         <li class="page-item {% if page == p %}active{% endif %}">
-        <a class="page-link" href="?page={{ p }}&search={{ search }}&sort={{ sort }}&order={{ order }}">{{ p }}</a>
+          <a class="page-link" href="?page={{ p }}&search={{ search }}&sort={{ sort }}&order={{ order }}">{{ p }}</a>
         </li>
         {% endfor %}
 
         {% if page < total_pages %}
         <li class="page-item">
-        <a class="page-link" href="?page={{ page + 1 }}&search={{ search }}&sort={{ sort }}&order={{ order }}">次へ</a>
+          <a class="page-link" href="?page={{ page + 1 }}&search={{ search }}&sort={{ sort }}&order={{ order }}">次へ</a>
         </li>
         {% endif %}
-    </ul>
+      </ul>
     </nav>
+
     <a href="/" class="btn btn-secondary mt-3">← 登録に戻る</a>
 </div>
 </body>

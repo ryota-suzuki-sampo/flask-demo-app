@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect
 import os
 import psycopg2
+from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__, template_folder="templates")
 
@@ -73,6 +74,67 @@ def list_ships():
 
     return render_template("ships.html", ships=ships, search=search, sort=sort, order=order, page=page, total_pages=total_pages)
 
+@app.route("/ships/<int:ship_id>")
+def ship_detail(ship_id):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT ship_name FROM ships WHERE id = %s", (ship_id,))
+            ship = cur.fetchone()
+            if not ship:
+                return "Not Found", 404
+
+            cur.execute("SELECT id, name FROM currencies")
+            currencies = cur.fetchall()
+
+            cur.execute("""
+                SELECT charter_currency_id, charter_fee,
+                       ship_currency_id, ship_cost,
+                       repayment_currency_id, repayment,
+                       interest_currency_id, interest
+                FROM ship_details WHERE ship_id = %s
+            """, (ship_id,))
+            detail = cur.fetchone()
+
+    return render_template("ship_detail.html", ship_id=ship_id, ship_name=ship[0], currencies=currencies, detail=detail)
+
+@app.route("/ships/<int:ship_id>/update", methods=["POST"])
+def update_ship_detail(ship_id):
+    data = {
+        "charter_currency_id": request.form.get("charter_currency_id"),
+        "charter_fee": request.form.get("charter_fee"),
+        "ship_currency_id": request.form.get("ship_currency_id"),
+        "ship_cost": request.form.get("ship_cost"),
+        "repayment_currency_id": request.form.get("repayment_currency_id"),
+        "repayment": request.form.get("repayment"),
+        "interest_currency_id": request.form.get("interest_currency_id"),
+        "interest": request.form.get("interest")
+    }
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM ship_details WHERE ship_id = %s", (ship_id,))
+            exists = cur.fetchone()
+            if exists:
+                cur.execute("""
+                    UPDATE ship_details
+                    SET charter_currency_id = %s, charter_fee = %s,
+                        ship_currency_id = %s, ship_cost = %s,
+                        repayment_currency_id = %s, repayment = %s,
+                        interest_currency_id = %s, interest = %s
+                    WHERE ship_id = %s
+                """, (*data.values(), ship_id))
+            else:
+                cur.execute("""
+                    INSERT INTO ship_details (
+                        ship_id,
+                        charter_currency_id, charter_fee,
+                        ship_currency_id, ship_cost,
+                        repayment_currency_id, repayment,
+                        interest_currency_id, interest
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (ship_id, *data.values()))
+
+    return redirect(url_for("ship_detail", ship_id=ship_id))
 if __name__ == "__main__":
     print("Starting app on port 5000...")
     app.run(host="0.0.0.0", port=5000)

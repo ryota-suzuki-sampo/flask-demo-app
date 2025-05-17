@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ ship_name }} 詳細</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <h1>{{ ship_name }} の詳細情報</h1>
+    <form method="post" action="/ships/{{ ship_id }}/update" class="row g-3 mt-4">
+        {% set d = detail or [None]*8 %}
+        {% set currency_options = "" %}
+        {% for c in currencies %}
+            {% set currency_options = currency_options + "<option value='" + c[0]|string + "'>" + c[1] + "</option>" %}
+        {% endfor %}
+
+        {% macro currency_select(name, selected) -%}
+            <select name="{{ name }}" class="form-select">
+                {% for id, name in currencies %}
+                    <option value="{{ id }}" {% if selected == id %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        {%- endmacro %}
+
+        <div class="col-md-6">
+            <label class="form-label">傭船料 (円/日)</label>
+            {{ currency_select('charter_currency_id', d[0]) }}
+            <input type="number" step="0.01" name="charter_fee" value="{{ d[1] or '' }}" class="form-control mt-1">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">船舶費 (円/月)</label>
+            {{ currency_select('ship_currency_id', d[2]) }}
+            <input type="number" step="0.01" name="ship_cost" value="{{ d[3] or '' }}" class="form-control mt-1">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">元利金 (円/月)</label>
+            {{ currency_select('repayment_currency_id', d[4]) }}
+            <input type="number" step="0.01" name="repayment" value="{{ d[5] or '' }}" class="form-control mt-1">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">利息 (円/月)</label>
+            {{ currency_select('interest_currency_id', d[6]) }}
+            <input type="number" step="0.01" name="interest" value="{{ d[7] or '' }}" class="form-control mt-1">
+        </div>
+
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">保存</button>
+            <a href="/ships" class="btn btn-secondary">← 戻る</a>
+        </div>
+    </form>
+</div>
+</body>
+</html>
