@@ -14,10 +14,10 @@
     {% if not edit %}
     <!-- 表形式の詳細表示 -->
     <table class="table table-bordered mt-4">
-        <tr><th>傭船料 (/day)</th><td>{{ d[1] or '' }} {{ currencies | selectattr('0', 'equalto', d[0]) | map(attribute='1') | list | first or '' }}</td></tr>
-        <tr><th>船舶費 (/month)</th><td>{{ d[3] or '' }} {{ currencies | selectattr('0', 'equalto', d[2]) | map(attribute='1') | list | first or '' }}</td></tr>
-        <tr><th>元利金 (/month)</th><td>{{ d[5] or '' }} {{ currencies | selectattr('0', 'equalto', d[4]) | map(attribute='1') | list | first or '' }}</td></tr>
-        <tr><th>利息 (/month)</th><td>{{ d[7] or '' }} {{ currencies | selectattr('0', 'equalto', d[6]) | map(attribute='1') | list | first or '' }}</td></tr>
+        <tr><th>傭船料 (/day)</th><td>{{ currencies | selectattr('0', 'equalto', d[0]) | map(attribute='1') | list | first or '' }} {{ '%.2f' | format(d[1]) if d[1] is not none else '' }}</td></tr>
+        <tr><th>船舶費 (/month)</th><td>{{ currencies | selectattr('0', 'equalto', d[2]) | map(attribute='1') | list | first or '' }} {{ '%.2f' | format(d[3]) if d[3] is not none else '' }}</td></tr>
+        <tr><th>元利金 (/month)</th><td>{{ currencies | selectattr('0', 'equalto', d[4]) | map(attribute='1') | list | first or '' }} {{ '%.2f' | format(d[5]) if d[5] is not none else '' }}</td></tr>
+        <tr><th>利息 (/month)</th><td>{{ currencies | selectattr('0', 'equalto', d[6]) | map(attribute='1') | list | first or '' }} {{ '%.2f' | format(d[7]) if d[7] is not none else '' }}</td></tr>
     </table>
     <a href="?edit=1" class="btn btn-primary">編集</a>
     <a href="/ships" class="btn btn-secondary">← 戻る</a>

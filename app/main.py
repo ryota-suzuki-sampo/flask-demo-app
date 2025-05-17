@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for, send_file
 import os
 import psycopg2
-from flask import Flask, render_template, request, redirect, url_for
+from datetime import datetime
+from io import BytesIO
+import openpyxl
 
 app = Flask(__name__, template_folder="templates")
 
@@ -143,6 +145,79 @@ def update_ship_detail(ship_id):
                 """, (ship_id, *data.values()))
 
     return redirect(url_for("ship_detail", ship_id=ship_id))
+
+@app.route("/export_excel", methods=["POST"])
+def export_excel():
+    ship_ids = request.form.getlist("ship_ids")
+    template_file = request.files.get("template_file")
+
+    if not ship_ids or not template_file:
+        return "船舶選択とテンプレートファイルの両方が必要です", 400
+
+    # テンプレート読み込み
+    wb = openpyxl.load_workbook(template_file)
+    if "format" not in wb.sheetnames:
+        return "テンプレートに 'format' シートが存在しません", 400
+
+    # 新シート作成
+    now_str = datetime.now().strftime("%Y%m%d%H%M")
+    ws_template = wb["format"]
+    ws_output = wb.copy_worksheet(ws_template)
+    ws_output.title = f"Output_{now_str}"
+
+    # DBから対象データ取得
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            format_ids = tuple(map(int, ship_ids))
+            cur.execute(f"""
+                SELECT s.id, s.ship_name,
+                       cd1.name AS charter_currency, sd.charter_fee,
+                       cd2.name AS ship_currency, sd.ship_cost,
+                       cd3.name AS repayment_currency, sd.repayment,
+                       cd4.name AS interest_currency, sd.interest
+                FROM ships s
+                LEFT JOIN ship_details sd ON s.id = sd.ship_id
+                LEFT JOIN currencies cd1 ON sd.charter_currency_id = cd1.id
+                LEFT JOIN currencies cd2 ON sd.ship_currency_id = cd2.id
+                LEFT JOIN currencies cd3 ON sd.repayment_currency_id = cd3.id
+                LEFT JOIN currencies cd4 ON sd.interest_currency_id = cd4.id
+                WHERE s.id IN %s
+                ORDER BY s.id
+            """, (format_ids,))
+            records = cur.fetchall()
+
+    # 4行目から書き込み
+    start_row = 4
+    for idx, row in enumerate(records, start=1):
+        ws_output.cell(row=start_row, column=2, value=idx)                     # B列: 連番
+        ws_output.cell(row=start_row, column=3, value=row[1])                 # C列: 船名
+        ws_output.cell(row=start_row, column=4, value=row[2])                 # D列: 傭船料通貨
+        ws_output.cell(row=start_row, column=5, value=row[3])                 # E列: 傭船料金額
+        ws_output.cell(row=start_row, column=6, value=row[4])                 # F列: 船舶費通貨
+        ws_output.cell(row=start_row, column=7, value=row[5])                 # G列: 船舶費金額
+        ws_output.cell(row=start_row, column=8, value=row[6])                 # H列: 元利金通貨
+        ws_output.cell(row=start_row, column=9, value=row[7])                 # I列: 元利金金額
+
+        # J列: 利息（%表示）
+        if row[8] is not None:
+            cell = ws_output.cell(row=start_row, column=10, value=row[8])
+            cell.number_format = '0.00%'
+
+        start_row += 1
+
+    # 出力ファイルをバッファに保存
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    filename = f"ShipExport_{now_str}.xlsx"
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 if __name__ == "__main__":
     print("Starting app on port 5000...")
     app.run(host="0.0.0.0", port=5000)

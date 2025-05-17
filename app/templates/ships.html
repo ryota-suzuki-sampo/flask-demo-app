@@ -19,58 +19,80 @@
         </div>
     </form>
 
-    <!-- 📋 一覧テーブル -->
-    <table class="table table-bordered table-striped">
-        <thead class="table-dark">
-        <tr>
-            <th><a href="?sort=id&order={{ 'asc' if sort != 'id' or order == 'desc' else 'desc' }}{% if search %}&search={{ search }}{% endif %}">No</a></th>
-            <th><a href="?sort=ship_name&order={{ 'asc' if sort != 'ship_name' or order == 'desc' else 'desc' }}{% if search %}&search={{ search }}{% endif %}">船名</a></th>
-            <th><a href="?sort=company_name&order={{ 'asc' if sort != 'company_name' or order == 'desc' else 'desc' }}{% if search %}&search={{ search }}{% endif %}">会社名</a></th>
-            <th>傭船形態</th>
-            <th><a href="?sort=completion_date&order={{ 'asc' if sort != 'completion_date' or order == 'desc' else 'desc' }}{% if search %}&search={{ search }}{% endif %}">竣工年月日</a></th>
-            <th>船籍</th>
-            <th>船種</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for ship in ships %}
-        <tr>
-            <td>{{ ship[0] }}</td>
-            <td><a href="/ships/{{ ship[0] }}">{{ ship[1] }}</a></td>
-            <td>{{ ship[2] }}</td>
-            <td>{{ ship[3] }}</td>
-            <td>{{ ship[4] }}</td>
-            <td>{{ ship[5] }}</td>
-            <td>{{ ship[6] }}</td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <!-- 📤 Excelエクスポートフォーム -->
+    <form method="post" action="/export_excel" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="template_file" class="form-label">Excelテンプレートを選択:</label>
+            <input type="file" class="form-control" name="template_file" id="template_file" required>
+        </div>
+
+        <!-- 📋 一覧テーブル -->
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+            <tr>
+                <th><input type="checkbox" id="select_all"></th>
+                <th><a href="?sort=id&order={{ 'asc' if sort != 'id' or order == 'desc' else 'desc' }}{% if search %}&search={{ search }}{% endif %}">No</a></th>
+                <th><a href="?sort=ship_name&order={{ 'asc' if sort != 'ship_name' or order == 'desc' else 'desc' }}{% if search %}&search={{ search }}{% endif %}">船名</a></th>
+                <th><a href="?sort=company_name&order={{ 'asc' if sort != 'company_name' or order == 'desc' else 'desc' }}{% if search %}&search={{ search }}{% endif %}">会社名</a></th>
+                <th>傭船形態</th>
+                <th><a href="?sort=completion_date&order={{ 'asc' if sort != 'completion_date' or order == 'desc' else 'desc' }}{% if search %}&search={{ search }}{% endif %}">竣工年月日</a></th>
+                <th>船籍</th>
+                <th>船種</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for ship in ships %}
+            <tr>
+                <td><input type="checkbox" name="ship_ids" value="{{ ship[0] }}"></td>
+                <td>{{ ship[0] }}</td>
+                <td><a href="/ships/{{ ship[0] }}">{{ ship[1] }}</a></td>
+                <td>{{ ship[2] }}</td>
+                <td>{{ ship[3] }}</td>
+                <td>{{ ship[4] }}</td>
+                <td>{{ ship[5] }}</td>
+                <td>{{ ship[6] }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <button type="submit" class="btn btn-success">Excel Export</button>
+    </form>
 
     <!-- 📄 ページリンク -->
     <nav aria-label="ページネーション">
-      <ul class="pagination mt-4">
-        {% if page > 1 %}
-        <li class="page-item">
-          <a class="page-link" href="?page={{ page - 1 }}&search={{ search }}&sort={{ sort }}&order={{ order }}">前へ</a>
-        </li>
-        {% endif %}
+        <ul class="pagination mt-4">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page - 1 }}&search={{ search }}&sort={{ sort }}&order={{ order }}">前へ</a>
+            </li>
+            {% endif %}
 
-        {% for p in range(1, total_pages + 1) %}
-        <li class="page-item {% if page == p %}active{% endif %}">
-          <a class="page-link" href="?page={{ p }}&search={{ search }}&sort={{ sort }}&order={{ order }}">{{ p }}</a>
-        </li>
-        {% endfor %}
+            {% for p in range(1, total_pages + 1) %}
+            <li class="page-item {% if page == p %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}&search={{ search }}&sort={{ sort }}&order={{ order }}">{{ p }}</a>
+            </li>
+            {% endfor %}
 
-        {% if page < total_pages %}
-        <li class="page-item">
-          <a class="page-link" href="?page={{ page + 1 }}&search={{ search }}&sort={{ sort }}&order={{ order }}">次へ</a>
-        </li>
-        {% endif %}
-      </ul>
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page + 1 }}&search={{ search }}&sort={{ sort }}&order={{ order }}">次へ</a>
+            </li>
+            {% endif %}
+        </ul>
     </nav>
 
     <a href="/" class="btn btn-secondary mt-3">← 登録に戻る</a>
 </div>
+
+<!-- ✅ 全選択チェックボックススクリプト -->
+<script>
+  document.getElementById('select_all').addEventListener('change', function () {
+    const checkboxes = document.querySelectorAll('input[name="ship_ids"]');
+    for (const cb of checkboxes) {
+      cb.checked = this.checked;
+    }
+  });
+</script>
 </body>
 </html>
