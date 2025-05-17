@@ -167,6 +167,7 @@ def export_excel():
     ws_template = wb["format"]
     ws_output = wb.copy_worksheet(ws_template)
     ws_output.title = f"Output_{now_str}"
+    wb.active = wb.index(ws_output)
 
     # DBから対象データ取得
     with get_conn() as conn:
@@ -202,9 +203,8 @@ def export_excel():
         ws_output.cell(row=start_row, column=9, value=row[7])                 # I列: 元利金金額
 
         # J列: 利息（%表示）
-        if row[8] is not None:
+        if row[9] is not None:
             cell = ws_output.cell(row=start_row, column=10, value=row[9])
-            cell.number_format = '0.00%'
 
         start_row += 1
 
