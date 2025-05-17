@@ -173,6 +173,7 @@ def export_excel():
     ws_template = wb["format"]
     ws_output = wb.copy_worksheet(ws_template)
     ws_output.title = f"Output_{now_str}"
+    ws_template.sheet_view.tabSelected = False
     wb.active = wb.index(ws_output)
 
     # DBから対象データ取得
