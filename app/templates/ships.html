@@ -103,9 +103,12 @@
     localStorage.setItem('selectedShipIds', JSON.stringify([...selectedIds]));
   });
 
-  document.querySelector('form').addEventListener('submit', function () {
-    // 重複削除
-    document.querySelectorAll('input[name=\"ship_ids\"]').forEach(el => el.remove());
+  // 🚨 フォームの明示的指定
+  const exportForm = document.querySelector('form[action="/export_excel"]');
+  exportForm.addEventListener('submit', function () {
+    // 古い hidden を削除
+    this.querySelectorAll('input[name="ship_ids"]').forEach(el => el.remove());
+
     [...selectedIds].forEach(id => {
       const input = document.createElement('input');
       input.type = 'hidden';
