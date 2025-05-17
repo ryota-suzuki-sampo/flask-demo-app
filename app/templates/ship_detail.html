@@ -8,13 +8,23 @@
 <body class="bg-light">
 <div class="container mt-5">
     <h1>{{ ship_name }} の詳細情報</h1>
-    <form method="post" action="/ships/{{ ship_id }}/update" class="row g-3 mt-4">
-        {% set d = detail or [None]*8 %}
-        {% set currency_options = "" %}
-        {% for c in currencies %}
-            {% set currency_options = currency_options + "<option value='" + c[0]|string + "'>" + c[1] + "</option>" %}
-        {% endfor %}
 
+    {% set d = detail or [None]*8 %}
+
+    {% if not edit %}
+    <!-- 表形式の詳細表示 -->
+    <table class="table table-bordered mt-4">
+        <tr><th>傭船料 (/day)</th><td>{{ d[1] or '' }} {{ currencies | selectattr('0', 'equalto', d[0]) | map(attribute='1') | list | first or '' }}</td></tr>
+        <tr><th>船舶費 (/month)</th><td>{{ d[3] or '' }} {{ currencies | selectattr('0', 'equalto', d[2]) | map(attribute='1') | list | first or '' }}</td></tr>
+        <tr><th>元利金 (/month)</th><td>{{ d[5] or '' }} {{ currencies | selectattr('0', 'equalto', d[4]) | map(attribute='1') | list | first or '' }}</td></tr>
+        <tr><th>利息 (/month)</th><td>{{ d[7] or '' }} {{ currencies | selectattr('0', 'equalto', d[6]) | map(attribute='1') | list | first or '' }}</td></tr>
+    </table>
+    <a href="?edit=1" class="btn btn-primary">編集</a>
+    <a href="/ships" class="btn btn-secondary">← 戻る</a>
+
+    {% else %}
+    <!-- 編集フォーム -->
+    <form method="post" action="/ships/{{ ship_id }}/update" class="row g-3 mt-4">
         {% macro currency_select(name, selected) -%}
             <select name="{{ name }}" class="form-select">
                 {% for id, name in currencies %}
@@ -24,34 +34,35 @@
         {%- endmacro %}
 
         <div class="col-md-6">
-            <label class="form-label">傭船料 (円/日)</label>
+            <label class="form-label">傭船料 (/day)</label>
             {{ currency_select('charter_currency_id', d[0]) }}
             <input type="number" step="0.01" name="charter_fee" value="{{ d[1] or '' }}" class="form-control mt-1">
         </div>
 
         <div class="col-md-6">
-            <label class="form-label">船舶費 (円/月)</label>
+            <label class="form-label">船舶費 (/month)</label>
             {{ currency_select('ship_currency_id', d[2]) }}
             <input type="number" step="0.01" name="ship_cost" value="{{ d[3] or '' }}" class="form-control mt-1">
         </div>
 
         <div class="col-md-6">
-            <label class="form-label">元利金 (円/月)</label>
+            <label class="form-label">元利金 (/month)</label>
             {{ currency_select('repayment_currency_id', d[4]) }}
             <input type="number" step="0.01" name="repayment" value="{{ d[5] or '' }}" class="form-control mt-1">
         </div>
 
         <div class="col-md-6">
-            <label class="form-label">利息 (円/月)</label>
+            <label class="form-label">利息 (/month)</label>
             {{ currency_select('interest_currency_id', d[6]) }}
             <input type="number" step="0.01" name="interest" value="{{ d[7] or '' }}" class="form-control mt-1">
         </div>
 
         <div class="col-12">
-            <button type="submit" class="btn btn-primary">保存</button>
-            <a href="/ships" class="btn btn-secondary">← 戻る</a>
+            <button type="submit" class="btn btn-success">保存</button>
+            <a href="/ships/{{ ship_id }}" class="btn btn-secondary">キャンセル</a>
         </div>
     </form>
+    {% endif %}
 </div>
 </body>
 </html>

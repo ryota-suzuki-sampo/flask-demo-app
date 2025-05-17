@@ -76,6 +76,8 @@ def list_ships():
 
 @app.route("/ships/<int:ship_id>")
 def ship_detail(ship_id):
+    edit_mode = request.args.get("edit") == "1"
+
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT ship_name FROM ships WHERE id = %s", (ship_id,))
@@ -95,7 +97,13 @@ def ship_detail(ship_id):
             """, (ship_id,))
             detail = cur.fetchone()
 
-    return render_template("ship_detail.html", ship_id=ship_id, ship_name=ship[0], currencies=currencies, detail=detail)
+    return render_template("ship_detail.html",
+                           ship_id=ship_id,
+                           ship_name=ship[0],
+                           currencies=currencies,
+                           detail=detail,
+                           edit=edit_mode)
+
 
 @app.route("/ships/<int:ship_id>/update", methods=["POST"])
 def update_ship_detail(ship_id):
