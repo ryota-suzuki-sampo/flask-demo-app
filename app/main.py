@@ -45,11 +45,11 @@ class User(UserMixin):
                     return User(*row)
         return None
 
-@app.route("/login", methods=["GET", "POST"])
 @login_manager.user_loader
 def load_user(user_id):
     return User.get(user_id)
 
+@app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form["username"]
