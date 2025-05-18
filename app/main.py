@@ -65,8 +65,8 @@ def login():
 @login_required
 def logout():
     logout_user()
+    flash("ログアウトしました")
     return redirect(url_for("login"))
-
 
 @app.route("/")
 def home_redirect():
@@ -287,6 +287,30 @@ def export_excel():
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+@app.route("/change_password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    if request.method == "POST":
+        current_pw = request.form["current_password"]
+        new_pw = request.form["new_password"]
+        confirm_pw = request.form["confirm_password"]
+
+        user = current_user
+
+        if not check_password_hash(user.password_hash, current_pw):
+            flash("現在のパスワードが正しくありません")
+        elif new_pw != confirm_pw:
+            flash("新しいパスワードが一致しません")
+        else:
+            new_hash = generate_password_hash(new_pw)
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, user.id))
+            flash("パスワードを変更しました")
+            return redirect(url_for("list_ships"))
+
+    return render_template("change_password.html")
 
 if __name__ == "__main__":
     print("Starting app on port 5000...")
