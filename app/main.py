@@ -1,4 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash
+from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import psycopg2
 from datetime import datetime
@@ -6,15 +8,72 @@ from io import BytesIO
 import openpyxl
 
 app = Flask(__name__, template_folder="templates")
+app.secret_key = os.environ.get("SECRET_KEY", "secret-key")
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+# --- DB接続 ---
 def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
+
+# --- User クラス ---
+class User(UserMixin):
+    def __init__(self, id, username, password_hash):
+        self.id = id
+        self.username = username
+        self.password_hash = password_hash
+
+    @staticmethod
+    def get_by_username(username):
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, username, password_hash FROM users WHERE username = %s", (username,))
+                row = cur.fetchone()
+                if row:
+                    return User(*row)
+        return None
+
+    @staticmethod
+    def get(user_id):
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, username, password_hash FROM users WHERE id = %s", (user_id,))
+                row = cur.fetchone()
+                if row:
+                    return User(*row)
+        return None
+
+@app.route("/login", methods=["GET", "POST"])
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
+
+def login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        user = User.get_by_username(username)
+        if user and check_password_hash(user.password_hash, password):
+            login_user(user)
+            return redirect(url_for("list_ships"))
+        flash("ユーザー名またはパスワードが正しくありません")
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
+
 
 @app.route("/")
 def home_redirect():
     return redirect("/ships")
 
 @app.route("/register", methods=["GET", "POST"])
+@login_required
 def register():
     if request.method == "POST":
         ship_name = request.form["ship_name"]
@@ -35,6 +94,7 @@ def register():
     return render_template("register.html")
 
 @app.route("/ships")
+@login_required
 def list_ships():
     search = request.args.get("search", "")
     sort = request.args.get("sort", "id")
