@@ -157,7 +157,9 @@ def ship_detail(ship_id):
                 SELECT charter_currency_id, charter_fee,
                        ship_currency_id, ship_cost,
                        repayment_currency_id, repayment,
-                       interest_currency_id, interest
+                       interest_currency_id, interest,
+                       loan_balance_currency_id,
+                       loan_balance
                 FROM ship_details WHERE ship_id = %s
             """, (ship_id,))
             detail = cur.fetchone()
@@ -189,7 +191,9 @@ def update_ship_detail(ship_id):
         "repayment_currency_id": request.form.get("repayment_currency_id"),
         "repayment": request.form.get("repayment"),
         "interest_currency_id": request.form.get("interest_currency_id"),
-        "interest": interest
+        "interest": interest,
+        "loan_balance_currency_id": request.form.get("loan_balance_currency_id"),
+        "loan_balance": request.form.get("loan_balance")
     }
 
     with get_conn() as conn:
@@ -202,7 +206,8 @@ def update_ship_detail(ship_id):
                     SET charter_currency_id = %s, charter_fee = %s,
                         ship_currency_id = %s, ship_cost = %s,
                         repayment_currency_id = %s, repayment = %s,
-                        interest_currency_id = %s, interest = %s
+                        interest_currency_id = %s, interest = %s,
+                        loan_balance_currency_id = %s, loan_balance = %s
                     WHERE ship_id = %s
                 """, (*data.values(), ship_id))
             else:
@@ -212,8 +217,8 @@ def update_ship_detail(ship_id):
                         charter_currency_id, charter_fee,
                         ship_currency_id, ship_cost,
                         repayment_currency_id, repayment,
-                        interest_currency_id, interest
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        interest_currency_id, interest, loan_balance_currency_id, loan_balance 
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (ship_id, *data.values()))
 
     return redirect(url_for("ship_detail", ship_id=ship_id))
@@ -249,12 +254,14 @@ def export_excel():
                        cd2.name AS ship_currency, sd.ship_cost,
                        cd3.name AS repayment_currency, sd.repayment,
                        cd4.name AS interest_currency, sd.interest
+                       cd5.name AS loan_currency, sd,loan_balance
                 FROM ships s
                 LEFT JOIN ship_details sd ON s.id = sd.ship_id
                 LEFT JOIN currencies cd1 ON sd.charter_currency_id = cd1.id
                 LEFT JOIN currencies cd2 ON sd.ship_currency_id = cd2.id
                 LEFT JOIN currencies cd3 ON sd.repayment_currency_id = cd3.id
                 LEFT JOIN currencies cd4 ON sd.interest_currency_id = cd4.id
+                LEFT JOIN currencies cd5 ON sd.loan_balance_currency_id = cd5.id
                 WHERE s.id IN %s
                 ORDER BY s.id
             """, (format_ids,))
