@@ -178,6 +178,9 @@ def ship_detail(ship_id):
 
 @app.route("/ships/<int:ship_id>/update", methods=["POST"])
 def update_ship_detail(ship_id):
+    interest_input = request.form.get("interest")
+    interest = float(interest_input) / 100 if interest_input else None
+
     data = {
         "charter_currency_id": request.form.get("charter_currency_id"),
         "charter_fee": request.form.get("charter_fee"),
@@ -186,7 +189,7 @@ def update_ship_detail(ship_id):
         "repayment_currency_id": request.form.get("repayment_currency_id"),
         "repayment": request.form.get("repayment"),
         "interest_currency_id": request.form.get("interest_currency_id"),
-        "interest": float(request.form.get("interest")) / 100
+        "interest": interest
     }
 
     with get_conn() as conn:
