@@ -344,35 +344,38 @@ def export_aggregated_excel():
     start_date = datetime.strptime(start_month, '%Y-%m')
     end_date   = (start_date + timedelta(days=366)).replace(day=1)
 
-    # 出力対象シートの通貨コード
+    # 出力対象の通貨シート
     currencies = ['USD', 'CHF', 'XEU']
 
-    # --- psycopg2 で傭船料合計を取得 ---
+    # psycopg2 で傭船料合計を取得（charter_currency_id を currencies.name とJOIN）
     sql = """
-        SELECT currency, COALESCE(SUM(charter_fee),0) AS total
-          FROM ship_details
-         WHERE ship_id = ANY(%s)
-           AND detail_date >= %s
-           AND detail_date  <  %s
-         GROUP BY currency
+        SELECT cd.name AS currency, COALESCE(SUM(sd.charter_fee), 0) AS total
+          FROM ship_details sd
+          JOIN currencies cd ON sd.charter_currency_id = cd.id
+         WHERE sd.ship_id = ANY(%s)
+           AND sd.detail_date >= %s
+           AND sd.detail_date  < %s
+         GROUP BY cd.name
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # ship_ids の文字列リストを整数リストに変換
-            cur.execute(sql,
-                        (list(map(int, ship_ids)), start_date, end_date))
+            cur.execute(
+                sql,
+                (list(map(int, ship_ids)), start_date, end_date)
+            )
             rows = cur.fetchall()
-    sums_by_currency = {row[0]: row[1] for row in rows}
+    # {'USD': 12345, 'CHF': 67890, ...}
+    sums_by_currency = {currency: total for currency, total in rows}
 
-    # --- Excel テンプレート読み込み & 書き込み ---
+    # Excel テンプレート読み込み & 書き込み
     wb = load_workbook(template_file.stream)
     buf = BytesIO()
 
     for cur_code in currencies:
-        sheet = f"収支合計_預金管理_{cur_code}"
-        if sheet not in wb.sheetnames:
+        sheet_name = f"収支合計_預金管理_{cur_code}"
+        if sheet_name not in wb.sheetnames:
             continue
-        ws = wb[sheet]
+        ws = wb[sheet_name]
 
         # E7 に開始年月をセット
         ws['E7'] = start_month
@@ -382,9 +385,9 @@ def export_aggregated_excel():
         for col in range(5, 17):  # E列=5 ～ P列=16
             ws.cell(row=11, column=col, value=total)
 
+    # バッファに保存して返却
     wb.save(buf)
     buf.seek(0)
-
     return send_file(
         buf,
         as_attachment=True,
