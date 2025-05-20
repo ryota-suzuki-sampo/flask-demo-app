@@ -3,9 +3,11 @@ from flask_login import LoginManager, login_user, logout_user, login_required, U
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 import openpyxl
+from openpyxl import load_workbook
+from sqlalchemy import text
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.environ.get("SECRET_KEY", "secret-key")
@@ -333,20 +335,64 @@ def aggregate_start():
 def export_aggregated_excel():
     # フォームデータ取得
     start_month   = request.form['start_month']      # "2025-05"
-    template_file = request.files['template_file']   # ファイルStorage
+    template_file = request.files['template_file']   # ユーザー選択ファイル
     ship_ids      = request.form.getlist('ship_ids') # ['7','12',...]
 
     if not ship_ids:
         return redirect(url_for('aggregate_start'))
 
-    # （ここに集計ロジック→openpyxl でテンプレートに書き込み→BytesIOで保存→send_file ）
-    # 例:
-    # wb = load_workbook(template_file)
-    # ws = wb.active
-    # ... 集計して書き込み ...
-    # buf = BytesIO()
-    # wb.save(buf); buf.seek(0)
-    # return send_file(buf, ...)
+    # 期間を計算
+    start_date = datetime.strptime(start_month, '%Y-%m')
+    end_date   = (start_date + timedelta(days=366)).replace(day=1)  # 12ヶ月後の月初
+
+    # 通貨リスト（出力対象シート名）
+    currencies = ['USD', 'CHF', 'XEU']
+
+    # DB から傭船料合計を取得
+    # 例：ship_details.detail_date, ship_details.charter_fee, ship_details.currency を想定
+    sql = text("""
+        SELECT currency, COALESCE(SUM(charter_fee),0) AS total
+        FROM ship_details
+        WHERE ship_id IN :ship_ids
+          AND detail_date >= :start_date
+          AND detail_date  < :end_date
+        GROUP BY currency
+    """)
+    result = db.session.execute(
+        sql,
+        {'ship_ids': tuple(map(int, ship_ids)),
+         'start_date': start_date,
+         'end_date':   end_date}
+    )
+    sums_by_currency = {row.currency: row.total for row in result}
+
+    # テンプレート読み込み
+    wb = load_workbook(template_file.stream)
+    buf = BytesIO()
+
+    for cur in currencies:
+        sheet_name = f"収支合計_預金管理_{cur}"
+        if sheet_name not in wb.sheetnames:
+            continue  # シートがなければスキップ
+        ws = wb[sheet_name]
+
+        # E7 に開始年月をセット
+        ws['E7'] = start_month
+
+        # 傭船料合計（金額）を E11～P11 に同じ値で書き込み
+        total = sums_by_currency.get(cur, 0)
+        for col in range(5, 17):  # E=5, F=6, … P=16
+            ws.cell(row=11, column=col, value=total)
+
+    # バッファに保存して返却
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=template_file.filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 if __name__ == "__main__":
     print("Starting app on port 5000...")
