@@ -325,24 +325,28 @@ def change_password():
 @app.route('/aggregate_start', methods=['GET'])
 @login_required
 def aggregate_start():
-    # 当月を渡す
     now = datetime.now()
     return render_template('aggregate_start.html', now=now)
 
-@app.route('/aggregate_confirm', methods=['GET'])
+@app.route('/export_aggregated_excel', methods=['POST'])
 @login_required
-def aggregate_confirm():
-    # ユーザーが選択した年月を取得
-    start_month = request.args.get('start_month')  # 例: "2025-05"
-    if not start_month:
+def export_aggregated_excel():
+    # フォームデータ取得
+    start_month   = request.form['start_month']      # "2025-05"
+    template_file = request.files['template_file']   # ファイルStorage
+    ship_ids      = request.form.getlist('ship_ids') # ['7','12',...]
+
+    if not ship_ids:
         return redirect(url_for('aggregate_start'))
 
-    # TODO: 次の画面で ship_ids を hidden で渡すか、localStorage から取得して
-    # 集計条件画面 (/export_aggregated_excel) にリダイレクトさせる実装を行います。
-    return render_template(
-        'aggregate_confirm.html',
-        start_month=start_month
-    )
+    # （ここに集計ロジック→openpyxl でテンプレートに書き込み→BytesIOで保存→send_file ）
+    # 例:
+    # wb = load_workbook(template_file)
+    # ws = wb.active
+    # ... 集計して書き込み ...
+    # buf = BytesIO()
+    # wb.save(buf); buf.seek(0)
+    # return send_file(buf, ...)
 
 if __name__ == "__main__":
     print("Starting app on port 5000...")
