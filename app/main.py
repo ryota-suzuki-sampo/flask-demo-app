@@ -333,35 +333,31 @@ def aggregate_start():
 @login_required
 def export_aggregated_excel():
     # フォームデータ取得
-    start_month   = request.form['start_month']      # "2025-05"
-    template_file = request.files['template_file']   # アップロードされたExcel
-    ship_ids      = request.form.getlist('ship_ids') # ['7','12',...]
+    start_month   = request.form['start_month']      # "2025-05" など
+    template_file = request.files['template_file']   # アップロードされた Excel
+    ship_ids      = request.form.getlist('ship_ids') # ['1','2',...]
 
     if not ship_ids:
         return redirect(url_for('aggregate_start'))
 
-    # 期間を計算
-    start_date = datetime.strptime(start_month, '%Y-%m')
-    end_date   = (start_date + timedelta(days=366)).replace(day=1)
-
-    # 出力対象の通貨シート
+    # 通貨コードリスト（出力対象シート名）
     currencies = ['USD', 'CHF', 'XEU']
 
-    # psycopg2 で傭船料合計を取得（charter_currency_id を currencies.name とJOIN）
+    # psycopg2 で傭船料合計を取得
     sql = """
-        SELECT cd.name AS currency, COALESCE(SUM(sd.charter_fee), 0) AS total
+        SELECT cd.name AS currency,
+               COALESCE(SUM(sd.charter_fee), 0) AS total
           FROM ship_details sd
-          JOIN currencies cd ON sd.charter_currency_id = cd.id
+          JOIN currencies cd
+            ON sd.charter_currency_id = cd.id
          WHERE sd.ship_id = ANY(%s)
-           AND sd.detail_date >= %s
-           AND sd.detail_date  < %s
          GROUP BY cd.name
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 sql,
-                (list(map(int, ship_ids)), start_date, end_date)
+                (list(map(int, ship_ids)),)
             )
             rows = cur.fetchall()
     # {'USD': 12345, 'CHF': 67890, ...}
@@ -371,8 +367,8 @@ def export_aggregated_excel():
     wb = load_workbook(template_file.stream)
     buf = BytesIO()
 
-    for cur_code in currencies:
-        sheet_name = f"収支合計_預金管理_{cur_code}"
+    for code in currencies:
+        sheet_name = f"収支合計_預金管理_{code}"
         if sheet_name not in wb.sheetnames:
             continue
         ws = wb[sheet_name]
@@ -380,8 +376,8 @@ def export_aggregated_excel():
         # E7 に開始年月をセット
         ws['E7'] = start_month
 
-        # E11～P11 に傭船料合計を同額で書き込み
-        total = sums_by_currency.get(cur_code, 0)
+        # E11～P11 に同じ傭船料合計を12列分書き込み
+        total = sums_by_currency.get(code, 0)
         for col in range(5, 17):  # E列=5 ～ P列=16
             ws.cell(row=11, column=col, value=total)
 
@@ -394,6 +390,7 @@ def export_aggregated_excel():
         download_name=template_file.filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 if __name__ == "__main__":
     print("Starting app on port 5000...")
