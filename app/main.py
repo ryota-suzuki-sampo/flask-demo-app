@@ -322,6 +322,28 @@ def change_password():
 
     return render_template("change_password.html")
 
+@app.route('/aggregate_start', methods=['GET'])
+@login_required
+def aggregate_start():
+    # 当月を渡す
+    now = datetime.now()
+    return render_template('aggregate_start.html', now=now)
+
+@app.route('/aggregate_confirm', methods=['GET'])
+@login_required
+def aggregate_confirm():
+    # ユーザーが選択した年月を取得
+    start_month = request.args.get('start_month')  # 例: "2025-05"
+    if not start_month:
+        return redirect(url_for('aggregate_start'))
+
+    # TODO: 次の画面で ship_ids を hidden で渡すか、localStorage から取得して
+    # 集計条件画面 (/export_aggregated_excel) にリダイレクトさせる実装を行います。
+    return render_template(
+        'aggregate_confirm.html',
+        start_month=start_month
+    )
+
 if __name__ == "__main__":
     print("Starting app on port 5000...")
     app.run(host="0.0.0.0", port=5000)
