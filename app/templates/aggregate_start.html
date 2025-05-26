@@ -1,3 +1,4 @@
+<!-- templates/aggregate_start.html -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -15,13 +16,14 @@
 <div class="container">
   <h2 class="mb-4">集計シート作成</h2>
 
-  <!-- 対象船舶名一覧 -->
+  <!-- 船舶名一覧表示部 -->
   <div class="mb-3">
     <label class="form-label">対象船舶</label>
     <ul id="ship-list" class="list-group"></ul>
   </div>
 
-  <form method="post" action="/export_aggregated_excel" enctype="multipart/form-data">
+  <!-- 集計実行フォーム -->
+  <form id="aggForm" method="post" action="/export_aggregated_excel" enctype="multipart/form-data">
     <div class="mb-3">
       <label for="start_month" class="form-label">開始年月</label>
       <input
@@ -50,17 +52,17 @@
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const shipListEl = document.getElementById('ship-list');
-    const selectedIds = JSON.parse(localStorage.getItem('selectedShipIds') || '[]');
-    if (!selectedIds.length) {
-      shipListEl.innerHTML = '<li class="list-group-item">（船舶が選択されていません）</li>';
-      return;
-    }
-    // API 経由で船名取得
+document.addEventListener('DOMContentLoaded', () => {
+  const shipListEl = document.getElementById('ship-list');
+  const selectedIds = JSON.parse(localStorage.getItem('selectedShipIds') || '[]');
+
+  // ① 船名表示（既存の/api/ship_names 呼び出し）
+  if (selectedIds.length === 0) {
+    shipListEl.innerHTML = '<li class="list-group-item">（船舶が選択されていません）</li>';
+  } else {
     fetch('/api/ship_names', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ship_ids: selectedIds})
     })
     .then(res => res.json())
@@ -73,7 +75,30 @@
         shipListEl.appendChild(li);
       });
     });
+  }
+
+  // ② フォーム送信前に ship_ids hidden input を追加
+  const form = document.getElementById('aggForm');
+  form.addEventListener('submit', function(e) {
+    // 既存の hidden をクリア
+    this.querySelectorAll('input[name="ship_ids"]').forEach(el => el.remove());
+
+    // localStorage から ship_ids を取得
+    if (selectedIds.length === 0) {
+      e.preventDefault();
+      alert('まず船舶を選択してください。');
+      return;
+    }
+    selectedIds.forEach(id => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = 'ship_ids';
+      inp.value = id;
+      this.appendChild(inp);
+    });
+    // ここまでで ship_ids が form データに乗ります
   });
+});
 </script>
 </body>
 </html>
