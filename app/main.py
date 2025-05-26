@@ -333,7 +333,7 @@ def aggregate_start():
 @login_required
 def export_aggregated_excel():
     # フォームデータ取得
-    start_month   = request.form['start_month']      # "2025-05" など
+    start_month   = request.form['start_month']      # "2025-05"
     template_file = request.files['template_file']   # アップロードされた Excel
     ship_ids      = request.form.getlist('ship_ids') # ['1','2',...]
 
@@ -343,8 +343,8 @@ def export_aggregated_excel():
     # 通貨コードリスト（出力対象シート名）
     currencies = ['USD', 'CHF', 'XEU']
 
-    # psycopg2 で傭船料合計を取得
-    sql = """
+    # psycopg2 で傭船料合計を取得（charter_currency_id → currencies.name JOIN）
+    sql_fee = """
         SELECT cd.name AS currency,
                COALESCE(SUM(sd.charter_fee), 0) AS total
           FROM ship_details sd
@@ -353,33 +353,47 @@ def export_aggregated_excel():
          WHERE sd.ship_id = ANY(%s)
          GROUP BY cd.name
     """
+
+    # psycopg2 で集計と船名取得
     with get_conn() as conn:
         with conn.cursor() as cur:
+            # 傭船料合計
+            cur.execute(sql_fee, (list(map(int, ship_ids)),))
+            fee_rows = cur.fetchall()
+            sums_by_currency = {c: t for c, t in fee_rows}
+
+            # 選択船舶名リスト
             cur.execute(
-                sql,
+                "SELECT ship_name FROM ships WHERE id = ANY(%s) ORDER BY id",
                 (list(map(int, ship_ids)),)
             )
-            rows = cur.fetchall()
-    # {'USD': 12345, 'CHF': 67890, ...}
-    sums_by_currency = {currency: total for currency, total in rows}
+            name_rows = cur.fetchall()
+    ship_names = [r[0] for r in name_rows]
 
     # Excel テンプレート読み込み & 書き込み
     wb = load_workbook(template_file.stream)
     buf = BytesIO()
 
+    # 通貨ごとのシートに傭船料合計を出力
     for code in currencies:
         sheet_name = f"収支合計_預金管理_{code}"
         if sheet_name not in wb.sheetnames:
             continue
         ws = wb[sheet_name]
-
-        # E7 に開始年月をセット
         ws['E7'] = start_month
-
-        # E11～P11 に同じ傭船料合計を12列分書き込み
         total = sums_by_currency.get(code, 0)
         for col in range(5, 17):  # E列=5 ～ P列=16
             ws.cell(row=11, column=col, value=total)
+
+    # 情報出力シートに船名を書き込み（S40から下方向）
+    info_sheet = "情報出力シート"
+    if info_sheet in wb.sheetnames:
+        ws_info = wb[info_sheet]
+        row = 40
+        col = 19  # S列
+        for name in ship_names:
+            ws_info.cell(row=row, column=col, value=name)
+            row += 1
 
     # バッファに保存して返却
     wb.save(buf)
