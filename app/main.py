@@ -483,13 +483,13 @@ def export_aggregated_excel():
         for col in range(5, 17):
             ws.cell(row=73, column=col, value=repay_val)
 
-        # ■ 支払利息（平均×100）：上部（USD→33行目）
-        usd_int = interest_avgs.get('USD', 0) * 100
+        # ■ 支払利息（平均）：上部（USD→33行目）
+        usd_int = interest_avgs.get('USD', 0)
         for col in range(5, 17):
             ws.cell(row=33, column=col, value=usd_int)
 
-        # ■ 支払利息（平均×100）：下部（指定通貨→76行目）
-        spec_int = interest_avgs.get(code, 0) * 100
+        # ■ 支払利息（平均）：下部（指定通貨→76行目）
+        spec_int = interest_avgs.get(code, 0)
         for col in range(5, 17):
             ws.cell(row=76, column=col, value=spec_int)
 
