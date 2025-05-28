@@ -397,6 +397,13 @@ def export_aggregated_excel():
          WHERE sd.ship_id = ANY(%s)
          GROUP BY cd.name
     """
+    # 6) 船舶名一覧取得
+    sql_names = """
+        SELECT ship_name
+          FROM ships
+         WHERE id = ANY(%s)
+         ORDER BY id
+    """
 
     # データ取得
     charter_totals = {}
@@ -474,7 +481,7 @@ def export_aggregated_excel():
         row_loan = 34 if code == 'USD' else 77
         ws.cell(row=row_loan, column=4, value=loan)
 
-        # 船舶名リスト：S40 以降
+        # ■ 船舶名リスト：S40 以降
         r = 40
         for name in ship_names:
             ws.cell(row=r, column=19, value=name)
@@ -489,6 +496,7 @@ def export_aggregated_excel():
         download_name=template_file.filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 if __name__ == "__main__":
     print("Starting app on port 5000...")
