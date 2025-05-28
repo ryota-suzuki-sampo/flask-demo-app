@@ -343,7 +343,6 @@ def api_ship_names():
             )
             rows = cur.fetchall()
     return jsonify([r[0] for r in rows])
-
 @app.route('/export_aggregated_excel', methods=['POST'])
 @login_required
 def export_aggregated_excel():
@@ -439,55 +438,74 @@ def export_aggregated_excel():
             ship_names = [r[0] for r in cur.fetchall()]
             print("SHIP NAMES:", ship_names)
 
-    # Excel 読み込み
+    # ３）Excelテンプレート読み込み
     wb = load_workbook(template_file.stream)
     buf = BytesIO()
 
-    # 通貨コード一覧
-    currencies = ['USD', 'CHF', 'XEU']
+    # 「収支合計_預金管理_XXX」シートの候補
+    valid_codes = ['JPY', 'CHF', 'XEU']
 
-    for code in currencies:
+    # ４）返済通貨ごとにシートを選択し書き込み
+    for code, repay_val in repay_totals.items():
+        # 対象シートがない or 返済通貨が対象外ならスキップ
+        if code not in valid_codes:
+            continue
         sheet_name = f"収支合計_預金管理_{code}"
         if sheet_name not in wb.sheetnames:
             continue
+
         ws = wb[sheet_name]
 
-        # ■ 傭船料：E11～P11
-        charter = charter_totals.get(code, 0)
+        # E7 に開始年月をセット
         ws['E7'] = start_month
+
+        # ■ 傭船料：上部（USDシート→E11～P11）…USDで集計
+        usd_charter = charter_totals.get('USD', 0)
         for col in range(5, 17):
-            ws.cell(row=11, column=col, value=charter)
+            ws.cell(row=11, column=col, value=usd_charter)
 
-        # ■ 船舶費：USD→14行目 / その他→57行目
-        cost = cost_totals.get(code, 0)
-        row_cost = 14 if code == 'USD' else 57
+        # ■ 船舶費：上部（USDシート→14行目）
+        usd_cost = cost_totals.get('USD', 0)
         for col in range(5, 17):
-            ws.cell(row=row_cost, column=col, value=cost)
+            ws.cell(row=14, column=col, value=usd_cost)
 
-        # ■ 返済額：USD→30行目 / その他→73行目
-        repay = repay_totals.get(code, 0)
-        row_repay = 30 if code == 'USD' else 73
+        # ■ 船舶費：下部（指定通貨→57行目）
+        spec_cost = cost_totals.get(code, 0)
         for col in range(5, 17):
-            ws.cell(row=row_repay, column=col, value=repay)
+            ws.cell(row=57, column=col, value=spec_cost)
 
-        # ■ 支払利息（平均値×100で％表記）：USD→33行目 / その他→76行目
-        avg_interest = interest_avgs.get(code, 0) * 100
-        row_int = 33 if code == 'USD' else 76
+        # ■ 返済額：上部（USD→30行目）
+        usd_repay = repay_totals.get('USD', 0)
         for col in range(5, 17):
-            ws.cell(row=row_int, column=col, value=avg_interest)
+            ws.cell(row=30, column=col, value=usd_repay)
 
-        # ■ 融資残高：USD→D34 / その他→D77
-        loan = loan_totals.get(code, 0)
-        row_loan = 34 if code == 'USD' else 77
-        ws.cell(row=row_loan, column=4, value=loan)
+        # ■ 返済額：下部（指定通貨→73行目）
+        for col in range(5, 17):
+            ws.cell(row=73, column=col, value=repay_val)
 
-        # ■ 船舶名リスト：S40 以降
+        # ■ 支払利息（平均×100）：上部（USD→33行目）
+        usd_int = interest_avgs.get('USD', 0) * 100
+        for col in range(5, 17):
+            ws.cell(row=33, column=col, value=usd_int)
+
+        # ■ 支払利息（平均×100）：下部（指定通貨→76行目）
+        spec_int = interest_avgs.get(code, 0) * 100
+        for col in range(5, 17):
+            ws.cell(row=76, column=col, value=spec_int)
+
+        # ■ 融資残高：上部（USD→D34）
+        ws.cell(row=34, column=4, value=loan_totals.get('USD', 0))
+
+        # ■ 融資残高：下部（指定通貨→D77）
+        ws.cell(row=77, column=4, value=loan_totals.get(code, 0))
+
+        # ■ 船舶名リスト：S40以降
         r = 40
         for name in ship_names:
             ws.cell(row=r, column=19, value=name)
             r += 1
 
-    # バッファに保存して返却
+    # ５）保存して返却
     wb.save(buf)
     buf.seek(0)
     return send_file(
