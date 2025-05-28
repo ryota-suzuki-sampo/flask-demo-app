@@ -343,65 +343,126 @@ def api_ship_names():
             )
             rows = cur.fetchall()
     return jsonify([r[0] for r in rows])
-
 @app.route('/export_aggregated_excel', methods=['POST'])
 @login_required
 def export_aggregated_excel():
-    start_month   = request.form['start_month']
-    template_file = request.files['template_file']
-    ship_ids      = request.form.getlist('ship_ids')
+    # フォームデータ取得
+    start_month   = request.form['start_month']      # "2025-05"
+    template_file = request.files['template_file']   # アップロードされた Excel
+    ship_ids      = request.form.getlist('ship_ids') # ['1','2',...]
 
     if not ship_ids:
         return redirect(url_for('aggregate_start'))
 
-    currencies = ['USD', 'CHF', 'XEU']
+    ids = list(map(int, ship_ids))
 
-    # 傭船料合計取得
-    sql_fee = """
-        SELECT cd.name AS currency,
-               COALESCE(SUM(sd.charter_fee), 0) AS total
+    # 1) 傭船料合計
+    sql_charter = """
+        SELECT cd.name AS currency, COALESCE(SUM(sd.charter_fee), 0) AS total
           FROM ship_details sd
           JOIN currencies cd ON sd.charter_currency_id = cd.id
          WHERE sd.ship_id = ANY(%s)
          GROUP BY cd.name
     """
+    # 2) 船舶費合計
+    sql_cost = """
+        SELECT cd.name AS currency, COALESCE(SUM(sd.ship_cost), 0) AS total
+          FROM ship_details sd
+          JOIN currencies cd ON sd.ship_currency_id = cd.id
+         WHERE sd.ship_id = ANY(%s)
+         GROUP BY cd.name
+    """
+    # 3) 返済額合計
+    sql_repay = """
+        SELECT cd.name AS currency, COALESCE(SUM(sd.repayment), 0) AS total
+          FROM ship_details sd
+          JOIN currencies cd ON sd.repayment_currency_id = cd.id
+         WHERE sd.ship_id = ANY(%s)
+         GROUP BY cd.name
+    """
+    # 4) 支払利息平均（小数→パーセントに変換）
+    sql_interest = """
+        SELECT cd.name AS currency, AVG(sd.interest) AS avg_val
+          FROM ship_details sd
+          JOIN currencies cd ON sd.interest_currency_id = cd.id
+         WHERE sd.ship_id = ANY(%s)
+         GROUP BY cd.name
+    """
+    # 5) 融資残高合計
+    sql_loan = """
+        SELECT cd.name AS currency, COALESCE(SUM(sd.loan_balance), 0) AS total
+          FROM ship_details sd
+          JOIN currencies cd ON sd.loan_balance_currency_id = cd.id
+         WHERE sd.ship_id = ANY(%s)
+         GROUP BY cd.name
+    """
+
+    charter_totals = {}
+    cost_totals    = {}
+    repay_totals   = {}
+    interest_avgs  = {}
+    loan_totals    = {}
+
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql_fee, (list(map(int, ship_ids)),))
-            fee_rows = cur.fetchall()
-            sums_by_currency = {c: t for c, t in fee_rows}
+            cur.execute(sql_charter, (ids,))
+            charter_totals = {c: t for c, t in cur.fetchall()}
 
-            # 船舶名リスト取得
-            cur.execute(
-                "SELECT ship_name FROM ships WHERE id = ANY(%s) ORDER BY id",
-                (list(map(int, ship_ids)),)
-            )
-            ship_names = [r[0] for r in cur.fetchall()]
+            cur.execute(sql_cost, (ids,))
+            cost_totals = {c: t for c, t in cur.fetchall()}
 
+            cur.execute(sql_repay, (ids,))
+            repay_totals = {c: t for c, t in cur.fetchall()}
+
+            cur.execute(sql_interest, (ids,))
+            interest_avgs = {c: v for c, v in cur.fetchall()}
+
+            cur.execute(sql_loan, (ids,))
+            loan_totals = {c: t for c, t in cur.fetchall()}
+
+    # Excel テンプレート読み込み
     wb = load_workbook(template_file.stream)
     buf = BytesIO()
 
-    # 各通貨シートに傭船料と船舶名を出力
+    # 通貨コード一覧
+    currencies = ['USD', 'CHF', 'XEU']
+
     for code in currencies:
         sheet_name = f"収支合計_預金管理_{code}"
         if sheet_name not in wb.sheetnames:
             continue
         ws = wb[sheet_name]
 
-        # E7 に開始年月
+        # ■ 傭船料：E11～P11
+        charter = charter_totals.get(code, 0)
         ws['E7'] = start_month
-
-        # E11～P11 に傭船料合計
-        total = sums_by_currency.get(code, 0)
         for col in range(5, 17):
-            ws.cell(row=11, column=col, value=total)
+            ws.cell(row=11, column=col, value=charter)
 
-        # S40 以降に対象船舶名を列挙 (S=19 列目)
-        row = 40
-        for name in ship_names:
-            ws.cell(row=row, column=19, value=name)
-            row += 1
+        # ■ 船舶費：USD→14行目 / その他→57行目
+        cost = cost_totals.get(code, 0)
+        row_cost = 14 if code == 'USD' else 57
+        for col in range(5, 17):
+            ws.cell(row=row_cost, column=col, value=cost)
 
+        # ■ 返済額：USD→30行目 / その他→73行目
+        repay = repay_totals.get(code, 0)
+        row_repay = 30 if code == 'USD' else 73
+        for col in range(5, 17):
+            ws.cell(row=row_repay, column=col, value=repay)
+
+        # ■ 支払利息（平均値×100で％表記）：USD→33行目 / その他→76行目
+        avg_interest = interest_avgs.get(code, 0) * 100
+        row_int = 33 if code == 'USD' else 76
+        for col in range(5, 17):
+            ws.cell(row=row_int, column=col, value=avg_interest)
+
+        # ■ 融資残高：USD→D34 / その他→D77
+        loan = loan_totals.get(code, 0)
+        row_loan = 34 if code == 'USD' else 77
+        ws.cell(row=row_loan, column=4, value=loan)
+
+    # バッファに保存して返却
     wb.save(buf)
     buf.seek(0)
     return send_file(
