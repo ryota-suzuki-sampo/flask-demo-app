@@ -343,6 +343,7 @@ def api_ship_names():
             )
             rows = cur.fetchall()
     return jsonify([r[0] for r in rows])
+
 @app.route('/export_aggregated_excel', methods=['POST'])
 @login_required
 def export_aggregated_excel():
@@ -397,30 +398,41 @@ def export_aggregated_excel():
          GROUP BY cd.name
     """
 
+    # データ取得
     charter_totals = {}
     cost_totals    = {}
     repay_totals   = {}
     interest_avgs  = {}
     loan_totals    = {}
+    ship_names     = []
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql_charter, (ids,))
-            charter_totals = {c: t for c, t in cur.fetchall()}
+            cur.execute(sql_charter,  (ids,))
+            charter_totals = dict(cur.fetchall())
+            print("CHARTER:", charter_totals)
 
-            cur.execute(sql_cost, (ids,))
-            cost_totals = {c: t for c, t in cur.fetchall()}
+            cur.execute(sql_cost,     (ids,))
+            cost_totals    = dict(cur.fetchall())
+            print("COST:", cost_totals)
 
-            cur.execute(sql_repay, (ids,))
-            repay_totals = {c: t for c, t in cur.fetchall()}
+            cur.execute(sql_repay,    (ids,))
+            repay_totals   = dict(cur.fetchall())
+            print("REPAY:", repay_totals)
 
             cur.execute(sql_interest, (ids,))
-            interest_avgs = {c: v for c, v in cur.fetchall()}
+            interest_avgs  = dict(cur.fetchall())
+            print("INTEREST AVG:", interest_avgs)
 
-            cur.execute(sql_loan, (ids,))
-            loan_totals = {c: t for c, t in cur.fetchall()}
+            cur.execute(sql_loan,     (ids,))
+            loan_totals    = dict(cur.fetchall())
+            print("LOAN:", loan_totals)
 
-    # Excel テンプレート読み込み
+            cur.execute(sql_names,    (ids,))
+            ship_names = [r[0] for r in cur.fetchall()]
+            print("SHIP NAMES:", ship_names)
+
+    # Excel 読み込み
     wb = load_workbook(template_file.stream)
     buf = BytesIO()
 
@@ -461,6 +473,12 @@ def export_aggregated_excel():
         loan = loan_totals.get(code, 0)
         row_loan = 34 if code == 'USD' else 77
         ws.cell(row=row_loan, column=4, value=loan)
+
+        # 船舶名リスト：S40 以降
+        r = 40
+        for name in ship_names:
+            ws.cell(row=r, column=19, value=name)
+            r += 1
 
     # バッファに保存して返却
     wb.save(buf)
