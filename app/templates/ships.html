@@ -48,6 +48,7 @@
           <th><a href="?sort=completion_date&order={{ 'asc' if sort != 'completion_date' or order == 'desc' else 'desc' }}{% if search %}&search={{ search }}{% endif %}">竣工年月日</a></th>
           <th>船籍</th>
           <th>船種</th>
+          <th>2通貨編集</th>
         </tr>
       </thead>
       <tbody>
@@ -61,6 +62,9 @@
           <td>{{ ship[4] }}</td>
           <td>{{ ship[5] }}</td>
           <td>{{ ship[6] }}</td>
+          <td>
+            <a href="/ships/{{ ship[0] }}/cost_items" class="btn btn-sm btn-outline-primary">2通貨編集</a>
+          </td>      
         </tr>
         {% endfor %}
       </tbody>

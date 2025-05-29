@@ -515,6 +515,58 @@ def export_aggregated_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
+@app.route("/ships/<int:ship_id>/cost_items", methods=["GET", "POST"])
+@login_required
+def manage_cost_items(ship_id):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            # 船名取得
+            cur.execute("SELECT ship_name FROM ships WHERE id = %s", (ship_id,))
+            row = cur.fetchone()
+            if not row:
+                return "Not Found", 404
+            ship_name = row[0]
+
+            # マスタ取得
+            cur.execute("SELECT id, currency_name FROM currency_kind_table ORDER BY id")
+            currencies = cur.fetchall()
+            cur.execute("SELECT id, item_name FROM cost_item_type_table ORDER BY id")
+            item_types = cur.fetchall()
+
+            if request.method == "POST":
+                # 一度削除してから再INSERT（簡易処理）
+                cur.execute("DELETE FROM ship_cost_items WHERE ship_id = %s", (ship_id,))
+                for item_id in [i[0] for i in item_types]:
+                    for gno in [1, 2]:
+                        currency = request.form.get(f"currency_{item_id}_{gno}")
+                        amount = request.form.get(f"amount_{item_id}_{gno}")
+                        if currency and amount:
+                            cur.execute("""
+                                INSERT INTO ship_cost_items
+                                (ship_id, item_type_id, group_no, currency_id, amount)
+                                VALUES (%s, %s, %s, %s, %s)
+                            """, (ship_id, item_id, gno, currency, amount))
+                return redirect(url_for("manage_cost_items", ship_id=ship_id))
+
+            # GET: 既存データ読み出し
+            cur.execute("""
+                SELECT item_type_id, group_no, currency_id, amount
+                  FROM ship_cost_items
+                 WHERE ship_id = %s
+            """, (ship_id,))
+            rows = cur.fetchall()
+
+            # 辞書化（item_type_id → {group_no → {currency_id, amount}})
+            cost_data = {}
+            for item_id, gno, curid, amt in rows:
+                cost_data.setdefault(item_id, {})[gno] = {"currency_id": curid, "amount": float(amt)}
+
+    return render_template("ship_cost_items.html",
+                           ship_id=ship_id,
+                           ship_name=ship_name,
+                           item_types=item_types,
+                           currencies=currencies,
+                           cost_data=cost_data)
 
 if __name__ == "__main__":
     print("Starting app on port 5000...")
