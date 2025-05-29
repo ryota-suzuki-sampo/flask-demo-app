@@ -254,7 +254,7 @@ def export_excel():
                        cd1.name AS charter_currency, sd.charter_fee,
                        cd2.name AS ship_currency, sd.ship_cost,
                        cd3.name AS repayment_currency, sd.repayment,
-                       cd4.name AS interest_currency, sd.interest
+                       cd4.name AS interest_currency, sd.interest,
                        cd5.name AS loan_currency, sd.loan_balance
                 FROM ships s
                 LEFT JOIN ship_details sd ON s.id = sd.ship_id
