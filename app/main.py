@@ -363,7 +363,7 @@ EXPORT_CONFIG = {
 def write_values(ws, row, cols, value):
     """同一行の複数列に同じ値を代入"""
     for col in cols:
-        ws.cell(row=row, column=col, value=value)
+        ws.cell(row=row, column=col).value = value
 
 @app.route('/export_aggregated_excel', methods=['POST'])
 @login_required
