@@ -357,7 +357,7 @@ EXPORT_CONFIG = {
     'interest_spec_row': 35,
     'loan_usd_cell': (17, 4),    # D17
     'loan_spec_cell': (36, 4),   # D36
-    'shipname_start_cell': (40, 4),  # S4〜
+    'shipname_start_cell': (5, 19),  # S5〜
 }
 
 def write_values(ws, row, cols, value):
