@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 import openpyxl
 from openpyxl import load_workbook
+import logging
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.environ.get("SECRET_KEY", "secret-key")
@@ -350,7 +351,7 @@ def api_ship_names():
     return jsonify([r[0] for r in rows])
 # --- 追加：Excel出力設定 ---
 EXPORT_CONFIG = {
-    'start_month': 'E7',
+    'start_month': 'E4',
     'usd_range_cols': list(range(5, 17)),  # E〜P列
 
     'charter_usd_row': 6,
@@ -487,6 +488,9 @@ def export_aggregated_excel():
                 for row in cur.fetchall()
             }
             print("FX RESERVE:", fx_reserve_data)
+            app.logger.info("FX RESERVE: %s", fx_reserve_data)
+            app.logger.info("fx_reserve_data keys: %s", list(fx_reserve_data.keys()))
+            app.logger.info("selected code: %s", code)
 
     # Excelテンプレート読み込み
     wb = load_workbook(template_file.stream)
