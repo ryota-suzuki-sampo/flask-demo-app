@@ -489,8 +489,6 @@ def export_aggregated_excel():
             }
             print("FX RESERVE:", fx_reserve_data)
             app.logger.info("FX RESERVE: %s", fx_reserve_data)
-            app.logger.info("fx_reserve_data keys: %s", list(fx_reserve_data.keys()))
-            app.logger.info("selected code: %s", code)
 
     # Excelテンプレート読み込み
     wb = load_workbook(template_file.stream)
