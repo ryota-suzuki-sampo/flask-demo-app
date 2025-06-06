@@ -34,6 +34,19 @@
             <th>融資残高</th>
             <td>{{ currencies | selectattr('0', 'equalto', d[8]) | map(attribute='1') | list | first or '' }} {{ "{:,.2f}".format(d[9]) if d[9] is not none else '' }}</td>
         </tr>
+        <tr>
+            <th>為替予約金額</th>
+            <td>
+                {{ currencies | selectattr('0', 'equalto', d[10]) | map(attribute='1') | list | first or '' }}
+                {{ "{:,.2f}".format(d[11]) if d[11] is not none else '' }}
+            </td>
+        </tr>
+        <tr>
+            <th>為替予約レート</th>
+            <td>
+                {{ "{:,.2f}".format(d[12]) if d[12] is not none else '' }}
+            </td>
+        </tr>
     </table>
     <a href="?edit=1" class="btn btn-primary">編集</a>
     <a href="/ships" class="btn btn-secondary">← 戻る</a>
