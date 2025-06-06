@@ -157,12 +157,13 @@ def ship_detail(ship_id):
 
             cur.execute("""
                 SELECT charter_currency_id, charter_fee,
-                       ship_currency_id, ship_cost,
-                       repayment_currency_id, repayment,
-                       interest_currency_id, interest,
-                       loan_balance_currency_id,
-                       loan_balance
-                FROM ship_details WHERE ship_id = %s
+                    ship_currency_id, ship_cost,
+                    repayment_currency_id, repayment,
+                    interest_currency_id, interest,
+                    loan_balance_currency_id, loan_balance,
+                    fx_reserve_currency_id, fx_reserve_amount, fx_reserve_rate
+                FROM ship_details
+                WHERE ship_id = %s
             """, (ship_id,))
             detail = cur.fetchone()
 
