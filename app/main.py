@@ -194,7 +194,10 @@ def update_ship_detail(ship_id):
         "interest_currency_id": request.form.get("interest_currency_id"),
         "interest": interest,
         "loan_balance_currency_id": request.form.get("loan_balance_currency_id"),
-        "loan_balance": request.form.get("loan_balance")
+        "loan_balance": request.form.get("loan_balance"),
+        "fx_reserve_currency_id": request.form.get("fx_reserve_currency_id"),
+        "fx_reserve_amount": request.form.get("fx_reserve_amount"),
+        "fx_reserve_rate": request.form.get("fx_reserve_rate")
     }
 
     with get_conn() as conn:
@@ -208,7 +211,8 @@ def update_ship_detail(ship_id):
                         ship_currency_id = %s, ship_cost = %s,
                         repayment_currency_id = %s, repayment = %s,
                         interest_currency_id = %s, interest = %s,
-                        loan_balance_currency_id = %s, loan_balance = %s
+                        loan_balance_currency_id = %s, loan_balance = %s,
+                        fx_reserve_currency_id = %s, fx_reserve_amount = %s, fx_reserve_rate = %s
                     WHERE ship_id = %s
                 """, (*data.values(), ship_id))
             else:
@@ -218,8 +222,9 @@ def update_ship_detail(ship_id):
                         charter_currency_id, charter_fee,
                         ship_currency_id, ship_cost,
                         repayment_currency_id, repayment,
-                        interest_currency_id, interest, loan_balance_currency_id, loan_balance 
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        interest_currency_id, interest, loan_balance_currency_id, loan_balance ,
+                        fx_reserve_currency_id, fx_reserve_amount, fx_reserve_rate
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (ship_id, *data.values()))
 
     return redirect(url_for("ship_detail", ship_id=ship_id))
@@ -348,7 +353,7 @@ EXPORT_CONFIG = {
     'start_month': 'E7',
     'usd_range_cols': list(range(5, 17)),  # E〜P列
 
-    'charter_usd_row': 7,
+    'charter_usd_row': 6,
     'cost_usd_row': 10,
     'cost_spec_row': 24,
     'repay_usd_row': 13,
@@ -358,6 +363,8 @@ EXPORT_CONFIG = {
     'loan_usd_cell': (17, 4),    # D17
     'loan_spec_cell': (36, 4),   # D36
     'shipname_start_cell': (5, 19),  # S5〜
+    'fx_reserve_row': 12,       # 為替予約金額
+    'fx_reserve_yen_row': 47,   # 金額換算（円）
 }
 
 def write_values(ws, row, cols, value):
@@ -425,6 +432,16 @@ def export_aggregated_excel():
          WHERE id = ANY(%s)
          ORDER BY id
     """
+    # 7) 為替予約情報
+    sql_fx_reserve = """
+        SELECT cd.name AS currency,
+               COALESCE(SUM(sd.fx_reserve_amount), 0) AS total_amount,
+               COALESCE(AVG(sd.fx_reserve_rate), 0) AS avg_rate
+          FROM ship_details sd
+          JOIN currencies cd ON sd.fx_reserve_currency_id = cd.id
+         WHERE sd.ship_id = ANY(%s)
+         GROUP BY cd.name
+    """
 
     # データ取得
     charter_totals = {}
@@ -433,6 +450,7 @@ def export_aggregated_excel():
     interest_avgs  = {}
     loan_totals    = {}
     ship_names     = []
+    fx_reserve_data = {}
 
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -459,6 +477,16 @@ def export_aggregated_excel():
             cur.execute(sql_names,    (ids,))
             ship_names = [r[0] for r in cur.fetchall()]
             print("SHIP NAMES:", ship_names)
+
+            cur.execute(sql_fx_reserve, (ids,))
+            fx_reserve_data = {
+                row[0]: {
+                    'amount': row[1],
+                    'rate': row[2]
+                }
+                for row in cur.fetchall()
+            }
+            print("FX RESERVE:", fx_reserve_data)
 
     # Excelテンプレート読み込み
     wb = load_workbook(template_file.stream)
@@ -498,6 +526,16 @@ def export_aggregated_excel():
         ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
         ws.cell(*config['loan_spec_cell'], value=loan_totals.get(code, 0))
 
+        # 為替予約情報
+        fx_data = fx_reserve_data.get(code, {'amount': 0, 'rate': 0})
+        fx_amount = fx_data['amount']
+        fx_rate   = fx_data['rate']
+        fx_yen    = fx_amount * fx_rate
+
+        # 12ヶ月分展開
+        write_values(ws, config['fx_reserve_row'], config['usd_range_cols'], fx_amount)
+        write_values(ws, config['fx_reserve_yen_row'], config['usd_range_cols'], fx_yen)
+
         # 船舶名リスト出力（S列40行目から）
         r, col = config['shipname_start_cell']
         for name in ship_names:
@@ -513,7 +551,6 @@ def export_aggregated_excel():
         download_name=template_file.filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-
 
 @app.route("/ships/<int:ship_id>/cost_items", methods=["GET", "POST"])
 @login_required
