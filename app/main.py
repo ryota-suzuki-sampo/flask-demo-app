@@ -271,7 +271,7 @@ def export_excel():
     # 4行目から書き込み
     start_row = 4
     for idx, row in enumerate(records, start=1):
-        ws_output.cell(row=start_row, column=2, value=idx)                     # B列: 連番
+        ws_output.cell(row=start_row, column=2, value=idx)                    # B列: 連番
         ws_output.cell(row=start_row, column=3, value=row[1])                 # C列: 船名
         ws_output.cell(row=start_row, column=4, value=row[2])                 # D列: 傭船料通貨
         ws_output.cell(row=start_row, column=5, value=row[3])                 # E列: 傭船料金額
@@ -343,13 +343,35 @@ def api_ship_names():
             )
             rows = cur.fetchall()
     return jsonify([r[0] for r in rows])
+# --- 追加：Excel出力設定 ---
+EXPORT_CONFIG = {
+    'start_month': 'E7',
+    'usd_range_cols': list(range(5, 17)),  # E〜P列
+
+    'charter_usd_row': 7,
+    'cost_usd_row': 10,
+    'cost_spec_row': 24,
+    'repay_usd_row': 13,
+    'repay_spec_row': 32,
+    'interest_usd_row': 16,
+    'interest_spec_row': 35,
+    'loan_usd_cell': (17, 4),    # D17
+    'loan_spec_cell': (36, 4),   # D36
+    'shipname_start_cell': (40, 4),  # S4〜
+}
+
+def write_values(ws, row, cols, value):
+    """同一行の複数列に同じ値を代入"""
+    for col in cols:
+        ws.cell(row=row, column=col, value=value)
+
 @app.route('/export_aggregated_excel', methods=['POST'])
 @login_required
 def export_aggregated_excel():
     # フォームデータ取得
-    start_month   = request.form['start_month']      # "2025-05"
-    template_file = request.files['template_file']   # アップロードされた Excel
-    ship_ids      = request.form.getlist('ship_ids') # ['1','2',...]
+    start_month   = request.form['start_month']
+    template_file = request.files['template_file']
+    ship_ids      = request.form.getlist('ship_ids')
 
     if not ship_ids:
         return redirect(url_for('aggregate_start'))
@@ -438,74 +460,51 @@ def export_aggregated_excel():
             ship_names = [r[0] for r in cur.fetchall()]
             print("SHIP NAMES:", ship_names)
 
-    # ３）Excelテンプレート読み込み
+    # Excelテンプレート読み込み
     wb = load_workbook(template_file.stream)
     buf = BytesIO()
 
     # 「収支合計_預金管理_XXX」シートの候補
     valid_codes = ['JPY', 'CHF', 'XEU']
 
-    # ４）返済通貨ごとにシートを選択し書き込み
+    # 返済通貨ごとにシートを選択し書き込み
     for code, repay_val in repay_totals.items():
-        # 対象シートがない or 返済通貨が対象外ならスキップ
-        if code not in valid_codes:
-            continue
         sheet_name = f"収支合計_預金管理_{code}"
-        if sheet_name not in wb.sheetnames:
+        if code not in valid_codes or sheet_name not in wb.sheetnames:
             continue
 
         ws = wb[sheet_name]
+        config = EXPORT_CONFIG
 
-        # E7 に開始年月をセット
-        ws['E7'] = start_month
+        # 開始年月
+        ws[config['start_month']] = start_month
 
-        # ■ 傭船料：上部（USDシート→E11～P11）…USDで集計
-        usd_charter = charter_totals.get('USD', 0)
-        for col in range(5, 17):
-            ws.cell(row=11, column=col, value=usd_charter)
+        # 傭船料（USD）
+        write_values(ws, config['charter_usd_row'], config['usd_range_cols'], charter_totals.get('USD', 0))
 
-        # ■ 船舶費：上部（USDシート→14行目）
-        usd_cost = cost_totals.get('USD', 0)
-        for col in range(5, 17):
-            ws.cell(row=14, column=col, value=usd_cost)
+        # 船舶費（USD / 指定通貨）
+        write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
+        write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
 
-        # ■ 船舶費：下部（指定通貨→57行目）
-        spec_cost = cost_totals.get(code, 0)
-        for col in range(5, 17):
-            ws.cell(row=57, column=col, value=spec_cost)
+        # 返済額（USD / 指定通貨）
+        write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
+        write_values(ws, config['repay_spec_row'], config['usd_range_cols'], repay_val)
 
-        # ■ 返済額：上部（USD→30行目）
-        usd_repay = repay_totals.get('USD', 0)
-        for col in range(5, 17):
-            ws.cell(row=30, column=col, value=usd_repay)
+        # 支払利息（USD / 指定通貨）
+        write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
+        write_values(ws, config['interest_spec_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
 
-        # ■ 返済額：下部（指定通貨→73行目）
-        for col in range(5, 17):
-            ws.cell(row=73, column=col, value=repay_val)
+        # 融資残高（USD / 指定通貨）
+        ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
+        ws.cell(*config['loan_spec_cell'], value=loan_totals.get(code, 0))
 
-        # ■ 支払利息（平均）：上部（USD→33行目）
-        usd_int = interest_avgs.get('USD', 0)
-        for col in range(5, 17):
-            ws.cell(row=33, column=col, value=usd_int)
-
-        # ■ 支払利息（平均）：下部（指定通貨→76行目）
-        spec_int = interest_avgs.get(code, 0)
-        for col in range(5, 17):
-            ws.cell(row=76, column=col, value=spec_int)
-
-        # ■ 融資残高：上部（USD→D34）
-        ws.cell(row=34, column=4, value=loan_totals.get('USD', 0))
-
-        # ■ 融資残高：下部（指定通貨→D77）
-        ws.cell(row=77, column=4, value=loan_totals.get(code, 0))
-
-        # ■ 船舶名リスト：S40以降
-        r = 40
+        # 船舶名リスト出力（S列40行目から）
+        r, col = config['shipname_start_cell']
         for name in ship_names:
-            ws.cell(row=r, column=19, value=name)
+            ws.cell(row=r, column=col, value=name)
             r += 1
 
-    # ５）保存して返却
+    # 保存して返却
     wb.save(buf)
     buf.seek(0)
     return send_file(
@@ -514,6 +513,7 @@ def export_aggregated_excel():
         download_name=template_file.filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 @app.route("/ships/<int:ship_id>/cost_items", methods=["GET", "POST"])
 @login_required
