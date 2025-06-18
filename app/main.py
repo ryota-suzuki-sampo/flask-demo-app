@@ -568,7 +568,7 @@ def manage_cost_items(ship_id):
             ship_name = row[0]
 
             # マスタ取得
-            cur.execute("SELECT id, currency_name FROM currency_kind_table ORDER BY id")
+            cur.execute("SELECT id, name FROM currencies ORDER BY id")
             currencies = cur.fetchall()
             cur.execute("SELECT id, item_name FROM cost_item_type_table ORDER BY id")
             item_types = cur.fetchall()
