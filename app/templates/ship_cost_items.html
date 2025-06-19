@@ -56,6 +56,7 @@
                                         <input type="number" step="0.01" name="ratio_{{ item_id }}_{{ gno }}"
                                             class="form-control"
                                             value="{{ cost_data.get(item_id, {}).get(gno, {}).ratio or '' }}">
+                                    <% endif %>
                                 </div>
                             </div>
                             {% endfor %}
