@@ -608,7 +608,10 @@ def manage_cost_items(ship_id):
             # 辞書化（item_type_id → {group_no → {currency_id, amount}})
             cost_data = {}
             for item_id, gno, curid, amt in rows:
-                cost_data.setdefault(item_id, {})[gno] = {"currency_id": curid, "amount": float(amt)}
+                cost_data.setdefault(item_id, {})[gno] = {
+                    "currency_id": curid,
+                    "ratio" if item_id == 6 else "amount": float(amt)
+                }
 
     return render_template("ship_cost_items.html",
                            ship_id=ship_id,
