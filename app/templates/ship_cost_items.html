@@ -15,7 +15,7 @@
                 <div class="col-12 mb-4">
                     <h5>{{ item_name }}</h5>
                     <div class="row">
-                        {% if item_id == 'charter_fee' %}
+                        {% if item_id == 'charter' %}
                             <div class="col-md-6">
                                 <label class="form-label">通貨</label>
                                 <div class="input-group">
@@ -23,7 +23,8 @@
                                         <option value="">-- 通貨選択 --</option>
                                         {% for cid, cname in currencies %}
                                             <option value="{{ cid }}"
-                                                {% if cost_data.get(item_id, {}).get(1, {}).currency_id == cid %}selected{% endif %}>
+                                                {% if cost_data.get(item_id, {}).get(1, {}).currency_id == cid 
+                                                or (item_id == 'charter_fee' and not cost_data.get(item_id, {}).get(1, {}).currency_id and cid == 2) %}selected{% endif %}>
                                                 {{ cname }}
                                             </option>
                                         {% endfor %}
