@@ -55,9 +55,9 @@
                                         value="{{ cost_data.get(item_id, {}).get(gno, {}).amount or '' }}">
                                     {% if item_id == 5 %}
                                         <span class="input-group-text">融資比率</span>
-                                        <input type="number" step="0.01" name="ratio_{{ item_id }}_{{ gno }}"
+                                        <input type="number" step="0.01" name="ratio_6_{{ gno }}"
                                             class="form-control"
-                                            value="{{ cost_data.get(item_id, {}).get(gno, {}).ratio or '' }}">
+                                            value="{{ cost_data.get(6, {}).get(gno, {}).ratio or '' }}">
                                     {% endif %}
                                 </div>
                             </div>
