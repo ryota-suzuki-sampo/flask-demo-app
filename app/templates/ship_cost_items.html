@@ -85,6 +85,33 @@
             <a href="{{ url_for('list_ships') }}" class="btn btn-secondary">戻る</a>
         </div>
     </form>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+    const inputs = document.querySelectorAll('input[name^="amount_"]');
+
+    inputs.forEach(input => {
+        // 表示用spanを挿入
+        const span = document.createElement('small');
+        span.className = 'text-muted d-block';
+        input.parentNode.appendChild(span);
+
+        const formatNumber = (val) => {
+        if (!val) return '';
+        return Number(val).toLocaleString();
+        };
+
+        const updateDisplay = () => {
+        span.textContent = formatNumber(input.value);
+        };
+
+        // 初期表示
+        updateDisplay();
+
+        // 入力時に更新
+        input.addEventListener('input', updateDisplay);
+    });
+    });
+    </script>
 </div>
 </body>
 </html>
