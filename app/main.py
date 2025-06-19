@@ -576,10 +576,18 @@ def manage_cost_items(ship_id):
             if request.method == "POST":
                 # 一度削除してから再INSERT（簡易処理）
                 cur.execute("DELETE FROM ship_cost_items WHERE ship_id = %s", (ship_id,))
+                loan_balance_currency_map = {}
                 for item_id in [i[0] for i in item_types]:
                     for gno in [1, 2]:
                         currency = request.form.get(f"currency_{item_id}_{gno}")
                         amount = request.form.get(f"amount_{item_id}_{gno}")
+                        ratio = request.form.get(f"ratio_{item_id}_{gno}")
+
+                        if item_id == 5 and currency:
+                            loan_balance_currency_map[gno] = currency
+                        if item_id == 6:
+                            currency = loan_balance_currency_map.get(gno)
+
                         if currency and amount:
                             cur.execute("""
                                 INSERT INTO ship_cost_items
