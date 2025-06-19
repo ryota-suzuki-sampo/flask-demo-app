@@ -12,6 +12,8 @@
     <form method="POST" class="mt-4">
         <div class="row">
             {% for item_id, item_name in item_types %}
+                {% set iid = item_id | int %}
+                {% if item_id != 6 %} 
                 <div class="col-12 mb-4">
                     <h5>{{ item_name }}</h5>
                     <div class="row">
