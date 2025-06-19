@@ -33,7 +33,8 @@
                                     </select>
                                     <input type="number" step="0.01" name="amount_{{ item_id }}_1"
                                         class="form-control"
-                                        value="{{ cost_data.get(item_id, {}).get(1, {}).amount or '' }}">
+                                        value="{{ cost_data.get(item_id, {}).get(1, {}).amount | float | format(',') }}">
+
                                 </div>
                             </div>
                         {% else %}
@@ -52,7 +53,7 @@
                                     </select>
                                     <input type="number" step="0.01" name="amount_{{ item_id }}_{{ gno }}"
                                         class="form-control"
-                                        value="{{ cost_data.get(item_id, {}).get(gno, {}).amount or '' }}">
+                                        value="{{ cost_data.get(item_id, {}).get(gno, {}).amount | float | format(',') }}">
                                     {% if item_id == 5 %}
                                         <span class="input-group-text">融資比率</span>
                                         <input type="number" step="0.01" name="ratio_6_{{ gno }}"
