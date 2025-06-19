@@ -24,7 +24,7 @@
                                         {% for cid, cname in currencies %}
                                             <option value="{{ cid }}"
                                                 {% if cost_data.get(item_id, {}).get(1, {}).currency_id == cid 
-                                                or (item_id == 'charter_fee' and not cost_data.get(item_id, {}).get(1, {}).currency_id and cid == 2) %}selected{% endif %}>
+                                                or (item_id == 1 and not cost_data.get(item_id, {}).get(1, {}).currency_id and cid == 2) %}selected{% endif %}>
                                                 {{ cname }}
                                             </option>
                                         {% endfor %}
@@ -51,10 +51,11 @@
                                     <input type="number" step="0.01" name="amount_{{ item_id }}_{{ gno }}"
                                         class="form-control"
                                         value="{{ cost_data.get(item_id, {}).get(gno, {}).amount or '' }}">
-                                    <span class="input-group-text">融資比率</span>
-                                    <input type="number" step="0.01" name="ratio_{{ item_id }}_{{ gno }}"
-                                        class="form-control"
-                                        value="{{ cost_data.get(item_id, {}).get(gno, {}).ratio or '' }}">
+                                    {% if item_id == 5 %}
+                                        <span class="input-group-text">融資比率</span>
+                                        <input type="number" step="0.01" name="ratio_{{ item_id }}_{{ gno }}"
+                                            class="form-control"
+                                            value="{{ cost_data.get(item_id, {}).get(gno, {}).ratio or '' }}">
                                 </div>
                             </div>
                             {% endfor %}
