@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const shipListEl = document.getElementById('ship-list');
   const selectedIds = JSON.parse(localStorage.getItem('selectedShipIds') || '[]');
 
-  // ① 船名表示（既存の/api/ship_names 呼び出し）
+  // ① 船名表示
   if (selectedIds.length === 0) {
     shipListEl.innerHTML = '<li class="list-group-item">（船舶が選択されていません）</li>';
   } else {
@@ -105,28 +105,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ② フォーム送信前に ship_ids hidden input を追加
-  const form = document.getElementById('aggForm');
-  form.addEventListener('submit', function(e) {
-    // 既存の hidden をクリア
-    this.querySelectorAll('input[name="ship_ids"]').forEach(el => el.remove());
+  // 共通の ship_ids hidden 追加処理（フォームに渡す）
+  function addShipIdsToForm(formEl) {
+    formEl.querySelectorAll('input[name="ship_ids"]').forEach(el => el.remove());
 
-    // localStorage から ship_ids を取得
     if (selectedIds.length === 0) {
-      e.preventDefault();
       alert('まず船舶を選択してください。');
-      return;
+      return false;
     }
     selectedIds.forEach(id => {
       const inp = document.createElement('input');
       inp.type = 'hidden';
       inp.name = 'ship_ids';
       inp.value = id;
-      this.appendChild(inp);
+      formEl.appendChild(inp);
     });
-    // ここまでで ship_ids が form データに乗ります
+    return true;
+  }
+
+  // ② 通常集計フォーム
+  const form1 = document.getElementById('aggForm');
+  form1.addEventListener('submit', function(e) {
+    if (!addShipIdsToForm(this)) e.preventDefault();
+  });
+
+  // ③ 2通貨対応集計フォーム
+  const form2 = document.getElementById('aggForm2');
+  form2.addEventListener('submit', function(e) {
+    if (!addShipIdsToForm(this)) e.preventDefault();
   });
 });
 </script>
+
 </body>
 </html>

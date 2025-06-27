@@ -567,6 +567,7 @@ def export_2currency_aggregated_excel():
     print("export_2currency_aggregated_excel Start")
 
     if not ship_ids:
+        print("export_2currency_aggregated_excel not ship end")
         return redirect(url_for('aggregate_start'))
 
     ids = list(map(int, ship_ids))
