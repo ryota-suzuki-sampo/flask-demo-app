@@ -790,8 +790,11 @@ def manage_cost_items(ship_id):
                         if currency and amount:
                             try:
                                 amount_val = float(amount.replace(',', '')) if isinstance(amount, str) else float(amount)
+                                print("item_id : ", item_id)
                                 if item_id == 4:  # 支払利息（％入力 → 実数保存）
+                                    print("amount_val1 : ", amount_val)
                                     amount_val /= 100
+                                    print("amount_val2 : ", amount_val)
                                 cur.execute("""
                                     INSERT INTO ship_cost_items
                                     (ship_id, item_type_id, group_no, currency_id, amount)
