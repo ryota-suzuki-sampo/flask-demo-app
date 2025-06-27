@@ -752,6 +752,7 @@ def export_2currency_aggregated_excel():
         download_name=template_file.filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 @app.route("/ships/<int:ship_id>/cost_items", methods=["GET", "POST"])
 @login_required
 def manage_cost_items(ship_id):
@@ -787,11 +788,17 @@ def manage_cost_items(ship_id):
                             amount = ratio
 
                         if currency and amount:
-                            cur.execute("""
-                                INSERT INTO ship_cost_items
-                                (ship_id, item_type_id, group_no, currency_id, amount)
-                                VALUES (%s, %s, %s, %s, %s)
-                            """, (ship_id, item_id, gno, currency, amount))
+                            try:
+                                amount_val = float(amount.replace(',', '')) if isinstance(amount, str) else float(amount)
+                                if item_id == 4:  # 支払利息（％入力 → 実数保存）
+                                    amount_val /= 100
+                                cur.execute("""
+                                    INSERT INTO ship_cost_items
+                                    (ship_id, item_type_id, group_no, currency_id, amount)
+                                    VALUES (%s, %s, %s, %s, %s)
+                                """, (ship_id, item_id, gno, currency, amount))
+                            except ValueError:
+                                pass
                 return redirect(url_for("manage_cost_items", ship_id=ship_id))
 
             # GET: 既存データ読み出し
