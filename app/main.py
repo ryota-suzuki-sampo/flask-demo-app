@@ -698,7 +698,7 @@ def export_2currency_aggregated_excel():
 
     # 返済通貨ごとにシートを選択し書き込み
     for code, repay_val in repay_totals.items():
-        sheet_name = f"収支合計_{code}"
+        sheet_name = f"収支合計_為替_{code}"
         if code not in valid_codes or sheet_name not in wb.sheetnames:
             continue
 
