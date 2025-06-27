@@ -459,6 +459,7 @@ def export_aggregated_excel():
             cur.execute(sql_charter,  (ids,))
             charter_totals = dict(cur.fetchall())
             print("CHARTER:", charter_totals)
+            app.logger.debug(f"CHARTER: {charter_totals}")
 
             cur.execute(sql_cost,     (ids,))
             cost_totals    = dict(cur.fetchall())
@@ -812,4 +813,5 @@ def manage_cost_items(ship_id):
 
 if __name__ == "__main__":
     print("Starting app on port 5000...")
+    app.logger.setLevel(logging.DEBUG)
     app.run(host="0.0.0.0", port=5000)
