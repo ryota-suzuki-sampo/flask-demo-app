@@ -555,6 +555,196 @@ def export_aggregated_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
+@app.route('/export_2currency_aggregated_excel', methods=['POST'])
+@login_required
+def export_2currency_aggregated_excel():
+    # フォームデータ取得
+    start_month   = request.form['start_month']
+    template_file = request.files['template_file']
+    ship_ids      = request.form.getlist('ship_ids')
+
+    if not ship_ids:
+        return redirect(url_for('aggregate_start'))
+
+    ids = list(map(int, ship_ids))
+
+    # 1) 傭船料合計
+    sql_charter = """
+        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
+          FROM ship_cost_items sci
+          JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+          JOIN currencies c ON sci.currency_id = c.id
+         WHERE cit.item_code = 'charter'
+           AND sci.ship_id = ANY(%s)
+         GROUP BY c.name
+    """
+    # 2) 船舶費合計
+    sql_cost = """
+        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
+          FROM ship_cost_items sci
+          JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+          JOIN currencies c ON sci.currency_id = c.id
+         WHERE cit.item_code = 'ship'
+           AND sci.ship_id = ANY(%s)
+         GROUP BY c.name
+    """
+    # 3) 返済額合計
+    sql_repay = """
+        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
+          FROM ship_cost_items sci
+          JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+          JOIN currencies c ON sci.currency_id = c.id
+         WHERE cit.item_code = 'repayment'
+           AND sci.ship_id = ANY(%s)
+         GROUP BY c.name
+    """
+    # 4) 支払利息平均（小数→パーセントに変換）
+    sql_interest = """
+        SELECT c.name AS currency, AVG(sci.amount) AS avg_val
+          FROM ship_cost_items sci
+          JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+          JOIN currencies c ON sci.currency_id = c.id
+         WHERE cit.item_code = 'interest'
+           AND sci.ship_id = ANY(%s)
+         GROUP BY c.name
+    """
+    # 5) 融資残高合計
+    sql_loan = """
+        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
+          FROM ship_cost_items sci
+          JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+          JOIN currencies c ON sci.currency_id = c.id
+         WHERE cit.item_code = 'loan'
+           AND sci.ship_id = ANY(%s)
+         GROUP BY c.name
+    """
+    # 6) 船舶名一覧取得
+    #sql_names = """
+    #    SELECT ship_name
+    #      FROM ships
+    #     WHERE id = ANY(%s)
+    #     ORDER BY id
+    #"""
+    # 7) 為替予約情報
+    #sql_fx_reserve = """
+    #    SELECT cd.name AS currency,
+    #           COALESCE(SUM(sd.fx_reserve_amount), 0) AS total_amount,
+    #           COALESCE(AVG(sd.fx_reserve_rate), 0) AS avg_rate
+    ##      FROM ship_details sd
+    #      JOIN currencies cd ON sd.fx_reserve_currency_id = cd.id
+    #     WHERE sd.ship_id = ANY(%s)
+    #     GROUP BY cd.name
+    #"""
+
+    # データ取得
+    charter_totals = {}
+    cost_totals    = {}
+    repay_totals   = {}
+    interest_avgs  = {}
+    loan_totals    = {}
+    #ship_names     = []
+    #fx_reserve_data = {}
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql_charter,  (ids,))
+            charter_totals = dict(cur.fetchall())
+            print("CHARTER:", charter_totals)
+
+            cur.execute(sql_cost,     (ids,))
+            cost_totals    = dict(cur.fetchall())
+            print("COST:", cost_totals)
+
+            cur.execute(sql_repay,    (ids,))
+            repay_totals   = dict(cur.fetchall())
+            print("REPAY:", repay_totals)
+
+            cur.execute(sql_interest, (ids,))
+            interest_avgs  = dict(cur.fetchall())
+            print("INTEREST AVG:", interest_avgs)
+
+            cur.execute(sql_loan,     (ids,))
+            loan_totals    = dict(cur.fetchall())
+            print("LOAN:", loan_totals)
+
+#            cur.execute(sql_names,    (ids,))
+#            ship_names = [r[0] for r in cur.fetchall()]
+#            print("SHIP NAMES:", ship_names)
+
+#            cur.execute(sql_fx_reserve, (ids,))
+#            fx_reserve_data = {
+#                row[0]: {
+#                    'amount': row[1],
+#                    'rate': row[2]
+#                }
+#                for row in cur.fetchall()
+#            }
+#            print("FX RESERVE:", fx_reserve_data)
+#            app.logger.info("FX RESERVE: %s", fx_reserve_data)
+
+    # Excelテンプレート読み込み
+    wb = load_workbook(template_file.stream)
+    buf = BytesIO()
+
+    # 「収支合計_預金管理_XXX」シートの候補
+    valid_codes = ['JPY', 'CHF', 'XEU']
+
+    # 返済通貨ごとにシートを選択し書き込み
+    for code, repay_val in repay_totals.items():
+        sheet_name = f"収支合計_{code}"
+        if code not in valid_codes or sheet_name not in wb.sheetnames:
+            continue
+
+        ws = wb[sheet_name]
+        config = EXPORT_CONFIG
+
+        # 開始年月
+        ws[config['start_month']] = start_month
+
+        # 傭船料（USD）
+        write_values(ws, config['charter_usd_row'], config['usd_range_cols'], charter_totals.get('USD', 0))
+
+        # 船舶費（USD / 指定通貨）
+        write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
+        write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
+
+        # 返済額（USD / 指定通貨）
+        write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
+        write_values(ws, config['repay_spec_row'], config['usd_range_cols'], repay_val)
+
+        # 支払利息（USD / 指定通貨）
+        write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
+        write_values(ws, config['interest_spec_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
+
+        # 融資残高（USD / 指定通貨）
+        ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
+        ws.cell(*config['loan_spec_cell'], value=loan_totals.get(code, 0))
+
+        # 為替予約情報
+        #fx_data = fx_reserve_data.get(code, {'amount': 0, 'rate': 0})
+        #fx_amount = fx_data['amount']
+        #fx_rate   = fx_data['rate']
+        #fx_yen    = fx_amount * fx_rate
+
+        # 12ヶ月分展開
+        #write_values(ws, config['fx_reserve_row'], config['usd_range_cols'], fx_amount)
+        #write_values(ws, config['fx_reserve_yen_row'], config['usd_range_cols'], fx_yen)
+
+        # 船舶名リスト出力（S列40行目から）
+        #r, col = config['shipname_start_cell']
+        #for name in ship_names:
+        #    ws.cell(row=r, column=col, value=name)
+        #    r += 1
+
+    # 保存して返却
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=template_file.filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 @app.route("/ships/<int:ship_id>/cost_items", methods=["GET", "POST"])
 @login_required
 def manage_cost_items(ship_id):
