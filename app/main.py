@@ -799,7 +799,7 @@ def manage_cost_items(ship_id):
                                     INSERT INTO ship_cost_items
                                     (ship_id, item_type_id, group_no, currency_id, amount)
                                     VALUES (%s, %s, %s, %s, %s)
-                                """, (ship_id, item_id, gno, currency, amount))
+                                """, (ship_id, item_id, gno, currency, amount_val))
                             except ValueError:
                                 pass
                 return redirect(url_for("manage_cost_items", ship_id=ship_id))
