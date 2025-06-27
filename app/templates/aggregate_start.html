@@ -131,11 +131,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ③ 2通貨対応集計フォーム
   const form2 = document.getElementById('aggForm2');
+  console.log("form2:", form2);
   form2.addEventListener('submit', function(e) {
-    if (!addShipIdsToForm(this)) e.preventDefault();
+    if (!addShipIdsToForm(this)) {
+      console.log("No ship_ids selected");
+      e.preventDefault();
+    } else {
+      console.log("ship_ids added:", selectedIds); 
+    }
   });
 });
 </script>
-
 </body>
 </html>
