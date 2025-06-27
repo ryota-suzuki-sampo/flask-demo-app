@@ -564,6 +564,8 @@ def export_2currency_aggregated_excel():
     template_file = request.files['template_file']
     ship_ids      = request.form.getlist('ship_ids')
 
+    print("export_2currency_aggregated_excel Start")
+
     if not ship_ids:
         return redirect(url_for('aggregate_start'))
 
@@ -646,6 +648,8 @@ def export_2currency_aggregated_excel():
     #ship_names     = []
     #fx_reserve_data = {}
 
+    print("export_2currency_aggregated_excel SQL")
+
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql_charter,  (ids,))
@@ -684,6 +688,7 @@ def export_2currency_aggregated_excel():
 #            app.logger.info("FX RESERVE: %s", fx_reserve_data)
 
     # Excelテンプレート読み込み
+    print("export_2currency_aggregated_excel load Excel File")
     wb = load_workbook(template_file.stream)
     buf = BytesIO()
 
