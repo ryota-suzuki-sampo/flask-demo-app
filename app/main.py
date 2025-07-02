@@ -758,6 +758,7 @@ def export_2currency_aggregated_excel():
 
     # 返済通貨ごとにシートを選択し書き込み
     for code, repay_val in repay_totals.items():
+        detail_sheet = None
         if code == 'USD':
             sheet_name = "収支合計_金利_USD"
             detail_sheet = "金利_USD"
