@@ -729,7 +729,7 @@ def export_2currency_aggregated_excel():
         ws[config['start_month']] = start_month
 
         # 傭船料（USD）
-        write_values(ws, config['charter_usd_row'], config['usd_range_cols'], charter_totals.get('USD', 0))
+        write_values(ws, config['charter_usd_row'], config['usd_range_cols'], charter_totals.get(code, 0))
 
         # 船舶費（USD / 指定通貨）
         write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
