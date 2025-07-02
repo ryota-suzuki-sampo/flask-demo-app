@@ -8,6 +8,7 @@ from io import BytesIO
 import openpyxl
 from openpyxl import load_workbook
 import logging
+import math
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.environ.get("SECRET_KEY", "secret-key")
@@ -572,7 +573,7 @@ def write_usd_detail_sheet(ws, ship_list, charter_by_ship, cost_by_ship, loan_by
         if loan == 0 or repay == 0:
             continue
 
-        repayment_monthly = repay / 12
+        repayment_years = repay * 12
         monthly_days = 30  # 1か月の暦日（必要に応じて調整）
         balance = loan
         interest_total = 0
@@ -582,18 +583,18 @@ def write_usd_detail_sheet(ws, ship_list, charter_by_ship, cost_by_ship, loan_by
             monthly_interest = balance * interest * monthly_days / 365
             interest_total += monthly_interest
             balance_sum += balance
-            balance -= repayment_monthly
+            balance -= repay
 
         average_balance = balance_sum / 12
 
         # 書き込み
         ws[f'B{row}'] = ship_name
-        ws[f'C{row}'] = charter * 365
-        ws[f'E{row}'] = cost * 12
-        ws[f'F{row}'] = loan
-        ws[f'G{row}'] = average_balance
-        ws[f'H{row}'] = repay
-        ws[f'J{row}'] = interest_total
+        ws[f'C{row}'] = rounddown(charter * 365,2)
+        ws[f'E{row}'] = rounddown(cost * 12,2)
+        ws[f'F{row}'] = rounddown(loan,0)
+        ws[f'G{row}'] = rounddown(average_balance,2)
+        ws[f'H{row}'] = rounddown(repayment_years,2)
+        ws[f'J{row}'] = rounddown(interest_total,2)
 
         row += 1
 
@@ -948,6 +949,21 @@ def manage_cost_items(ship_id):
                            currencies=currencies,
                            cost_data=cost_data)
 
+def rounddown(value, digit):
+    """
+    Python版 ROUNDDOWN 相当
+
+    Parameters:
+        value : float or int  切り捨て対象の値
+        digit : int           桁指定（例: -2 ⇒ 100単位、2 ⇒ 小数点第2位）
+    """
+    factor = 10 ** digit
+    if digit >= 0:
+        return math.floor(value * factor) / factor
+    else:
+        factor = 10 ** (-digit)
+        return math.floor(value / factor) * factor
+    
 if __name__ == "__main__":
     print("Starting app on port 5000...")
     app.logger.setLevel(logging.DEBUG)
