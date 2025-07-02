@@ -633,7 +633,17 @@ def export_2currency_aggregated_excel():
           AND sci.ship_id = ANY(%s)
         GROUP BY sci.ship_id
     """
-    # 2) 船舶費合計
+    # 2) 船舶費合計（通貨単位）
+    sql_cost = """
+        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
+        FROM ship_cost_items sci
+        JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+        JOIN currencies c ON sci.currency_id = c.id
+        WHERE cit.item_code = 'ship'
+          AND sci.ship_id = ANY(%s)
+        GROUP BY c.name
+    """
+    # 2-2) 船舶費合計（船単位）
     sql_ship_cost = """
         SELECT sci.ship_id, COALESCE(SUM(sci.amount), 0) AS total
         FROM ship_cost_items sci
@@ -644,6 +654,16 @@ def export_2currency_aggregated_excel():
         GROUP BY sci.ship_id
     """
     # 3) 返済額合計
+    sql_repay = """
+        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
+        FROM ship_cost_items sci
+        JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+        JOIN currencies c ON sci.currency_id = c.id
+        WHERE cit.item_code = 'repayment'
+          AND sci.ship_id = ANY(%s)
+        GROUP BY c.name
+    """
+    # 3-2) 返済額合計（船単位）
     sql_ship_repay = """
         SELECT sci.ship_id, COALESCE(SUM(sci.amount), 0) AS total
         FROM ship_cost_items sci
@@ -653,7 +673,17 @@ def export_2currency_aggregated_excel():
           AND sci.ship_id = ANY(%s)
         GROUP BY sci.ship_id
     """
-    # 4) 支払利息平均（小数→パーセントに変換）
+    # 4) 支払利息平均（通貨単位）
+    sql_interest = """
+        SELECT c.name AS currency, AVG(sci.amount) AS avg_val
+        FROM ship_cost_items sci
+        JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+        JOIN currencies c ON sci.currency_id = c.id
+        WHERE cit.item_code = 'interest'
+          AND sci.ship_id = ANY(%s)
+        GROUP BY c.name
+    """
+    # 4-2) 支払利息平均（船単位）
     sql_ship_interest = """
         SELECT sci.ship_id, AVG(sci.amount) AS avg_val
         FROM ship_cost_items sci
@@ -663,7 +693,17 @@ def export_2currency_aggregated_excel():
           AND sci.ship_id = ANY(%s)
         GROUP BY sci.ship_id
     """
-    # 5) 融資残高合計
+    # 5) 融資残高合計（通貨単位）
+    sql_loan = """
+        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
+        FROM ship_cost_items sci
+        JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+        JOIN currencies c ON sci.currency_id = c.id
+        WHERE cit.item_code = 'loan'
+          AND sci.ship_id = ANY(%s)
+        GROUP BY c.name
+    """
+    # 5-2) 融資残高合計（船単位)
     sql_ship_loan = """
         SELECT sci.ship_id, COALESCE(SUM(sci.amount), 0) AS total
         FROM ship_cost_items sci
