@@ -519,15 +519,15 @@ def export_aggregated_excel():
         write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
 
         # 返済額（USD / 指定通貨）
-        write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
+        # write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
         write_values(ws, config['repay_spec_row'], config['usd_range_cols'], repay_val)
 
         # 支払利息（USD / 指定通貨）
-        write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
+        # write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
         write_values(ws, config['interest_spec_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
 
         # 融資残高（USD / 指定通貨）
-        ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
+        # ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
         ws.cell(*config['loan_spec_cell'], value=loan_totals.get(code, 0))
 
         # 為替予約情報
@@ -656,7 +656,7 @@ def export_2currency_aggregated_excel():
     repay_totals   = {}
     interest_avgs  = {}
     loan_totals    = {}
-    #ship_names     = []
+    ship_names     = []
     #fx_reserve_data = {}
 
     print("export_2currency_aggregated_excel SQL")
@@ -718,7 +718,10 @@ def export_2currency_aggregated_excel():
 
     # 返済通貨ごとにシートを選択し書き込み
     for code, repay_val in repay_totals.items():
-        sheet_name = f"収支合計_為替_{code}"
+        if code == 'USD':
+            sheet_name = "収支合計_金利_USD"
+        else:
+            sheet_name = f"収支合計_為替_{code}"
         if code not in valid_codes or sheet_name not in wb.sheetnames:
             continue
 
