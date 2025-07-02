@@ -629,56 +629,56 @@ def export_2currency_aggregated_excel():
         JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
         JOIN currencies c ON sci.currency_id = c.id
         WHERE cit.item_code = 'charter'
-        AND c.name = 'USD'
-        AND sci.ship_id = ANY(%s)
+          AND c.name = 'USD'
+          AND sci.ship_id = ANY(%s)
         GROUP BY sci.ship_id
     """
     # 2) 船舶費合計
-    sql_cost = """
-        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
-          FROM ship_cost_items sci
-          JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
-          JOIN currencies c ON sci.currency_id = c.id
-         WHERE cit.item_code = 'ship'
-           AND sci.ship_id = ANY(%s)
-         GROUP BY c.name
+    sql_ship_cost = """
+        SELECT sci.ship_id, COALESCE(SUM(sci.amount), 0) AS total
+        FROM ship_cost_items sci
+        JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+        JOIN currencies c ON sci.currency_id = c.id
+        WHERE cit.item_code = 'ship'
+          AND sci.ship_id = ANY(%s)
+        GROUP BY sci.ship_id
     """
     # 3) 返済額合計
-    sql_repay = """
-        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
-          FROM ship_cost_items sci
-          JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
-          JOIN currencies c ON sci.currency_id = c.id
-         WHERE cit.item_code = 'repayment'
-           AND sci.ship_id = ANY(%s)
-         GROUP BY c.name
+    sql_ship_repay = """
+        SELECT sci.ship_id, COALESCE(SUM(sci.amount), 0) AS total
+        FROM ship_cost_items sci
+        JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+        JOIN currencies c ON sci.currency_id = c.id
+        WHERE cit.item_code = 'repayment'
+          AND sci.ship_id = ANY(%s)
+        GROUP BY sci.ship_id
     """
     # 4) 支払利息平均（小数→パーセントに変換）
-    sql_interest = """
-        SELECT c.name AS currency, AVG(sci.amount) AS avg_val
-          FROM ship_cost_items sci
-          JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
-          JOIN currencies c ON sci.currency_id = c.id
-         WHERE cit.item_code = 'interest'
-           AND sci.ship_id = ANY(%s)
-         GROUP BY c.name
+    sql_ship_interest = """
+        SELECT sci.ship_id, AVG(sci.amount) AS avg_val
+        FROM ship_cost_items sci
+        JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+        JOIN currencies c ON sci.currency_id = c.id
+        WHERE cit.item_code = 'interest'
+          AND sci.ship_id = ANY(%s)
+        GROUP BY sci.ship_id
     """
     # 5) 融資残高合計
-    sql_loan = """
-        SELECT c.name AS currency, COALESCE(SUM(sci.amount), 0) AS total
-          FROM ship_cost_items sci
-          JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
-          JOIN currencies c ON sci.currency_id = c.id
-         WHERE cit.item_code = 'loan'
-           AND sci.ship_id = ANY(%s)
-         GROUP BY c.name
+    sql_ship_loan = """
+        SELECT sci.ship_id, COALESCE(SUM(sci.amount), 0) AS total
+        FROM ship_cost_items sci
+        JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+        JOIN currencies c ON sci.currency_id = c.id
+        WHERE cit.item_code = 'loan'
+          AND sci.ship_id = ANY(%s)
+        GROUP BY sci.ship_id
     """
     # 6) 船舶名一覧取得
     sql_names = """
-        SELECT ship_name
-          FROM ships
-         WHERE id = ANY(%s)
-         ORDER BY id
+        SELECT id, ship_name
+        FROM ships
+        WHERE id = ANY(%s)
+        ORDER BY id
     """
     # 7) 為替予約情報
     #sql_fx_reserve = """
@@ -705,9 +705,9 @@ def export_2currency_aggregated_excel():
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql_ship_repay_currency, (ids,))
-            repay_currency_by_ship = dict(cur.fetchall())  # { ship_id: 'JPY', ... }
+            repay_currency_by_ship = dict(cur.fetchall())
             cur.execute(sql_ship_charter, (ids,))
-            charter_by_ship = dict(cur.fetchall())         # { ship_id: 200, ... }
+            charter_by_ship = dict(cur.fetchall())
             # --- repayment 通貨単位で合計 ---
             charter_totals = {}
             for ship_id, amount in charter_by_ship.items():
@@ -718,25 +718,33 @@ def export_2currency_aggregated_excel():
             print("CHARTER:", charter_totals)
 
             cur.execute(sql_cost,     (ids,))
-            cost_totals    = dict(cur.fetchall())
+            cost_totals = dict(cur.fetchall())
             print("COST:", cost_totals)
 
             cur.execute(sql_repay,    (ids,))
-            repay_totals   = dict(cur.fetchall())
+            repay_totals = dict(cur.fetchall())
             print("REPAY:", repay_totals)
 
             cur.execute(sql_interest, (ids,))
-            interest_avgs  = dict(cur.fetchall())
+            interest_avgs = dict(cur.fetchall())
             print("INTEREST AVG:", interest_avgs)
 
             cur.execute(sql_loan,     (ids,))
-            loan_totals    = dict(cur.fetchall())
+            loan_totals = dict(cur.fetchall())
             print("LOAN:", loan_totals)
 
             cur.execute(sql_names,    (ids,))
-            ship_names = [r[0] for r in cur.fetchall()]
+            ship_name_dict = dict(cur.fetchall())
             print("SHIP NAMES:", ship_names)
 
+            cur.execute(sql_ship_cost, (ids,))
+            cost_by_ship = dict(cur.fetchall())
+            cur.execute(sql_ship_loan, (ids,))
+            loan_by_ship = dict(cur.fetchall())
+            cur.execute(sql_ship_repay, (ids,))
+            repay_by_ship = dict(cur.fetchall())
+            cur.execute(sql_ship_interest, (ids,))
+            interest_by_ship = dict(cur.fetchall())
 #            cur.execute(sql_fx_reserve, (ids,))
 #            fx_reserve_data = {
 #                row[0]: {
@@ -764,6 +772,7 @@ def export_2currency_aggregated_excel():
             detail_sheet = "金利_USD"
         else:
             sheet_name = f"収支合計_為替_{code}"
+
         if code not in valid_codes or sheet_name not in wb.sheetnames:
             continue
 
@@ -778,7 +787,6 @@ def export_2currency_aggregated_excel():
 
         # 船舶費（USD / 指定通貨）
         write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
-
         if sheet_name == f"収支合計_為替_{code}":
             write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
 
@@ -806,10 +814,10 @@ def export_2currency_aggregated_excel():
 
         # 船舶名リスト出力（S列40行目から）
         r, col = config['shipname_start_cell']
-        for name in ship_names:
+        for name in ship_name_dict.values():
             ws.cell(row=r, column=col, value=name)
             r += 1
-            
+
         if detail_sheet and detail_sheet in wb.sheetnames:
             ws_detail = wb[detail_sheet]
             # 呼び出し関数に必要情報を渡す
