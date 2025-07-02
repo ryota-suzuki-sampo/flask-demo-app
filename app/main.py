@@ -714,7 +714,7 @@ def export_2currency_aggregated_excel():
     buf = BytesIO()
 
     # 「収支合計_預金管理_XXX」シートの候補
-    valid_codes = ['JPY', 'CHF', 'XEU']
+    valid_codes = ['JPY', 'CHF', 'XEU', 'USD']
 
     # 返済通貨ごとにシートを選択し書き込み
     for code, repay_val in repay_totals.items():
