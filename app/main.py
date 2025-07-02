@@ -557,7 +557,7 @@ def export_aggregated_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
-def write_usd_detail_sheet(ws, ship_list, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_by_id):
+def write_usd_detail_sheet(start_month,ws, ship_list, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_by_id):
     row = 6
     for ship_id in ship_list:
         ship_name = ship_name_by_id.get(ship_id)
@@ -588,6 +588,7 @@ def write_usd_detail_sheet(ws, ship_list, charter_by_ship, cost_by_ship, loan_by
         average_balance = balance_sum / 12
 
         # 書き込み
+        ws['G3'] = start_month
         ws[f'B{row}'] = ship_name
         ws[f'C{row}'] = rounddown(charter * 365,2)
         ws[f'E{row}'] = rounddown(cost * 12,2)
@@ -863,7 +864,7 @@ def export_2currency_aggregated_excel():
             ws_detail = wb[detail_sheet]
             # 呼び出し関数に必要情報を渡す
             usd_ship_ids = [sid for sid, curr in repay_currency_by_ship.items() if curr == 'USD']
-            write_usd_detail_sheet(ws_detail, usd_ship_ids, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_dict)
+            write_usd_detail_sheet(start_month,ws_detail, usd_ship_ids, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_dict)
 
     # 保存して返却
     wb.save(buf)
