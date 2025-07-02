@@ -556,6 +556,47 @@ def export_aggregated_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
+def write_usd_detail_sheet(ws, ship_list, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_by_id):
+    row = 6
+    for ship_id in ship_list:
+        ship_name = ship_name_by_id.get(ship_id)
+        if not ship_name:
+            continue
+
+        charter = charter_by_ship.get(ship_id, 0)
+        cost = cost_by_ship.get(ship_id, 0)
+        loan = loan_by_ship.get(ship_id, 0)
+        repay = repay_by_ship.get(ship_id, 0)
+        interest = interest_by_ship.get(ship_id, 0)
+
+        if loan == 0 or repay == 0:
+            continue
+
+        repayment_monthly = repay / 12
+        monthly_days = 30  # 1か月の暦日（必要に応じて調整）
+        balance = loan
+        interest_total = 0
+        balance_sum = 0
+
+        for m in range(12):
+            monthly_interest = balance * interest * monthly_days / 365
+            interest_total += monthly_interest
+            balance_sum += balance
+            balance -= repayment_monthly
+
+        average_balance = balance_sum / 12
+
+        # 書き込み
+        ws[f'B{row}'] = ship_name
+        ws[f'C{row}'] = charter * 365
+        ws[f'E{row}'] = cost * 12
+        ws[f'F{row}'] = loan
+        ws[f'G{row}'] = average_balance
+        ws[f'H{row}'] = repay
+        ws[f'J{row}'] = interest_total
+
+        row += 1
+
 @app.route('/export_2currency_aggregated_excel', methods=['POST'])
 @login_required
 def export_2currency_aggregated_excel():
@@ -674,7 +715,6 @@ def export_2currency_aggregated_excel():
                 if not repay_currency:
                     continue
                 charter_totals[repay_currency] = charter_totals.get(repay_currency, 0) + amount
-
             print("CHARTER:", charter_totals)
 
             cur.execute(sql_cost,     (ids,))
@@ -720,6 +760,7 @@ def export_2currency_aggregated_excel():
     for code, repay_val in repay_totals.items():
         if code == 'USD':
             sheet_name = "収支合計_金利_USD"
+            detail_sheet = "金利_USD"
         else:
             sheet_name = f"収支合計_為替_{code}"
         if code not in valid_codes or sheet_name not in wb.sheetnames:
@@ -736,7 +777,9 @@ def export_2currency_aggregated_excel():
 
         # 船舶費（USD / 指定通貨）
         write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
-        write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
+
+        if sheet_name == f"収支合計_為替_{code}":
+            write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
 
         # 返済額（USD / 指定通貨）
         write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
@@ -765,6 +808,12 @@ def export_2currency_aggregated_excel():
         for name in ship_names:
             ws.cell(row=r, column=col, value=name)
             r += 1
+            
+        if detail_sheet and detail_sheet in wb.sheetnames:
+            ws_detail = wb[detail_sheet]
+            # 呼び出し関数に必要情報を渡す
+            usd_ship_ids = [sid for sid, curr in repay_currency_by_ship.items() if curr == 'USD']
+            write_usd_detail_sheet(ws_detail, usd_ship_ids, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_dict)
 
     # 保存して返却
     wb.save(buf)
