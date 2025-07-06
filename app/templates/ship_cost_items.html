@@ -87,36 +87,61 @@
     </form>
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-    const inputs = document.querySelectorAll('input[name^="amount_"]');
+        const inputs = document.querySelectorAll('input[name^="amount_"]');
 
-    inputs.forEach(input => {
-        const formatNumber = (val) => {
-        val = val.replace(/,/g, '');
-        if (!val || isNaN(val)) return '';
-        const parts = val.split('.');
-        parts[0] = Number(parts[0]).toLocaleString();
-        return parts.join('.');
-        };
+        inputs.forEach(input => {
+            const formatNumber = (val) => {
+            val = val.replace(/,/g, '');
+            if (!val || isNaN(val)) return '';
+            const parts = val.split('.');
+            parts[0] = Number(parts[0]).toLocaleString();
+            return parts.join('.');
+            };
 
-        const unformat = (val) => val.replace(/,/g, '');
+            const unformat = (val) => val.replace(/,/g, '');
 
-        // 初期整形（初回表示時）
-        input.value = formatNumber(input.value);
+            // 初期整形（初回表示時）
+            input.value = formatNumber(input.value);
 
-        // 入力時にリアルタイム整形
-        input.addEventListener('input', () => {
-        const cursorPos = input.selectionStart;
-        const unformatted = unformat(input.value);
-        input.value = formatNumber(unformatted);
-        // カーソル位置補正（簡易）
-        input.setSelectionRange(cursorPos, cursorPos);
+            // 入力時にリアルタイム整形
+            input.addEventListener('input', () => {
+                const cursorPos = input.selectionStart;
+                const unformatted = unformat(input.value);
+                input.value = formatNumber(unformatted);
+                // カーソル位置補正（簡易）
+                input.setSelectionRange(cursorPos, cursorPos);
+            });
+
+            // フォーム送信前にカンマを除去（on submit）
+            input.form.addEventListener('submit', () => {
+                input.value = unformat(input.value);
+            });
         });
+        const repaymentSelect = document.querySelector('select[name="currency_1_1"]');
+        const interestSelects = document.querySelectorAll('select[name^="currency_3_"]');
+        const loanSelects = document.querySelectorAll('select[name^="currency_5_"]');
 
-        // フォーム送信前にカンマを除去（on submit）
-        input.form.addEventListener('submit', () => {
-        input.value = unformat(input.value);
-        });
-    });
+        function syncCurrency() {
+            const selectedValue = repaymentSelect.value;
+
+            interestSelects.forEach(select => {
+                select.value = selectedValue;
+                select.setAttribute('readonly', true);
+                select.disabled = true;
+            });
+
+            loanSelects.forEach(select => {
+                select.value = selectedValue;
+                select.setAttribute('readonly', true);
+                select.disabled = true;
+            });
+        }
+
+        if (repaymentSelect) {
+            repaymentSelect.addEventListener('change', syncCurrency);
+            // 初期化（ページロード時にも同期）
+            syncCurrency();
+        }
     });
     </script>
 </div>
