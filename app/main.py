@@ -826,10 +826,10 @@ def export_2currency_aggregated_excel():
                 if len(ratios) >= 2:
                     total = sum(ratios.values())
                     for currency, val in ratios.items():
-                        ratios[currency] = round((val / total) * 100, 2)
+                        ratios[currency] = round((val / total) , 2)
                 else:
                     for currency in ratios:
-                        ratios[currency] = 100
+                        ratios[currency] = 1
 
             print("=== 結果 ===")
             print(loan_ratios_by_ship)
@@ -861,7 +861,9 @@ def export_2currency_aggregated_excel():
         ws[config['start_month']] = start_month
 
         # 傭船料（USD）
-        write_values(ws, config['charter_usd_row'], config['usd_range_cols'], charter_totals.get(code, 0))
+        charter_fee = charter_totals.get(code, 0) * ratios[code]
+        print("Charter Fee : ",charter_fee)
+        write_values(ws, ['cconfigharter_usd_row'], config['usd_range_cols'], charter_fee)
 
         # 船舶費（USD / 指定通貨）
         write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
