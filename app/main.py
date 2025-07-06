@@ -733,6 +733,16 @@ def export_2currency_aggregated_excel():
     #     GROUP BY cd.name
     #"""
 
+    #8) 融資率取得
+    sql_loan_ratio = """
+    SELECT sci.ship_id, c.name AS currency, sci.amount AS ratio
+        FROM ship_cost_items sci
+        JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
+        JOIN currencies c ON sci.currency_id = c.id
+        WHERE cit.item_code = 'loan_ratio'
+        AND sci.ship_id = ANY(%s)
+    """
+
     # データ取得
     charter_totals = {}
     cost_totals    = {}
@@ -740,6 +750,7 @@ def export_2currency_aggregated_excel():
     interest_avgs  = {}
     loan_totals    = {}
     ship_names     = []
+    loan_ratios    = {}
     #fx_reserve_data = {}
 
     print("export_2currency_aggregated_excel SQL")
@@ -748,8 +759,10 @@ def export_2currency_aggregated_excel():
         with conn.cursor() as cur:
             cur.execute(sql_ship_repay_currency, (ids,))
             repay_currency_by_ship = dict(cur.fetchall())
+
             cur.execute(sql_ship_charter, (ids,))
             charter_by_ship = dict(cur.fetchall())
+
             # --- repayment 通貨単位で合計 ---
             charter_totals = {}
             for ship_id, amount in charter_by_ship.items():
@@ -797,6 +810,31 @@ def export_2currency_aggregated_excel():
 #            }
 #            print("FX RESERVE:", fx_reserve_data)
 #            app.logger.info("FX RESERVE: %s", fx_reserve_data)
+
+            cur.execute(sql_loan_ratio, (ids,))
+            loan_ratios = dict(cur.fetchall())
+
+    # 結果の通貨数でON/OFF判定
+    if len(loan_ratios) >= 2:
+        # 2通貨対応 ON
+        total = sum(loan_ratios.values())
+        normalized_ratios = {}
+        if total > 0:
+            for currency, val in loan_ratios.items():
+                # 正規化: 通貨ごとに (val / total) * 100
+                normalized_ratios[currency] = round((val / total) * 100, 2)
+        else:
+            # 全額0の場合はすべて0%
+            for currency in loan_ratios:
+                normalized_ratios[currency] = 0
+    else:
+        # 2通貨対応 OFF
+        normalized_ratios = {}
+        for currency, val in loan_ratios.items():
+            normalized_ratios[currency] = 100
+
+    print("=== 正規化後の融資比率 ===")
+    print(normalized_ratios)
 
     # Excelテンプレート読み込み
     print("export_2currency_aggregated_excel load Excel File")
