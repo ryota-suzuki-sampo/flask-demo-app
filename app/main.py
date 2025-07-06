@@ -974,6 +974,9 @@ def manage_cost_items(ship_id):
             item_types = cur.fetchall()
 
             if request.method == "POST":
+                print("=== 全フォームデータ ===")
+                for k, v in request.form.items():
+                    print(f"{k} = {v}")
                 # 一度削除してから再INSERT（簡易処理）
                 cur.execute("DELETE FROM ship_cost_items WHERE ship_id = %s", (ship_id,))
                 loan_balance_currency_map = {}
@@ -981,28 +984,37 @@ def manage_cost_items(ship_id):
                     for gno in [1, 2]:
                         currency = request.form.get(f"currency_{item_id}_{gno}")
                         amount = request.form.get(f"amount_{item_id}_{gno}")
+                
+                        print(f"item_id={item_id}, gno={gno}, currency={currency}, amount={amount}")
 
                         if item_id == 5 and currency:
                             loan_balance_currency_map[gno] = currency
+                            print(f"loan_balance_currency_map[{gno}] set to {currency}")
+
                         if item_id == 6:
                             ratio = request.form.get(f"ratio_{item_id}_{gno}")
                             currency = request.form.get(f"currency_5_{gno}")  
                             amount = ratio
+                            print(f"item_id=6, gno={gno}, ratio={ratio}, currency={currency}, amount={amount}")
 
                         if currency and amount:
                             try:
                                 amount_val = float(amount.replace(',', '')) if isinstance(amount, str) else float(amount)
                                 print("item_id : ", item_id)
                                 if item_id == 4:  # 支払利息（％入力 → 実数保存）
-                                    print("amount_val1 : ", amount_val)
+                                    print(f"支払利息 before div: {amount_val}")
                                     amount_val /= 100
-                                    print("amount_val2 : ", amount_val)
+                                    print(f"支払利息 after div: {amount_val}")
+                                
+                                print(f"→ INSERT準備: ship_id={ship_id}, item_id={item_id}, gno={gno}, currency={currency}, amount_val={amount_val}")
+                                
                                 cur.execute("""
                                     INSERT INTO ship_cost_items
                                     (ship_id, item_type_id, group_no, currency_id, amount)
                                     VALUES (%s, %s, %s, %s, %s)
                                 """, (ship_id, item_id, gno, currency, amount_val))
-                            except ValueError:
+                            except ValueError as e:
+                                print(f"ValueError at item_id={item_id}, gno={gno}: {e}")
                                 pass
                 return redirect(url_for("manage_cost_items", ship_id=ship_id))
 
@@ -1013,7 +1025,9 @@ def manage_cost_items(ship_id):
                  WHERE ship_id = %s
             """, (ship_id,))
             rows = cur.fetchall()
-
+            print("=== DBから読み出した既存データ ===")
+            for row in rows:
+                print(row)
             # 辞書化（item_type_id → {group_no → {currency_id, amount}})
             cost_data = {}
             for item_id, gno, curid, amt in rows:
@@ -1021,7 +1035,9 @@ def manage_cost_items(ship_id):
                     "currency_id": curid,
                     "ratio" if item_id == 6 else "amount": float(amt)
                 }
-
+            print("=== 辞書化後 cost_data ===")
+            for item_id, groups in cost_data.items():
+                print(f"item_id={item_id}: {groups}")
     return render_template("ship_cost_items.html",
                            ship_id=ship_id,
                            ship_name=ship_name,
