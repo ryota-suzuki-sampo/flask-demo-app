@@ -94,28 +94,20 @@
 
         inputs.forEach(input => {
             const formatNumber = (val) => {
-            val = val.replace(/,/g, '');
-            if (!val || isNaN(val)) return '';
-            const parts = val.split('.');
-            parts[0] = Number(parts[0]).toLocaleString();
-            return parts.join('.');
+                val = val.replace(/,/g, '');
+                if (!val || isNaN(val)) return '';
+                const parts = val.split('.');
+                parts[0] = Number(parts[0]).toLocaleString();
+                return parts.join('.');
             };
-
             const unformat = (val) => val.replace(/,/g, '');
-
-            // 初期整形（初回表示時）
             input.value = formatNumber(input.value);
-
-            // 入力時にリアルタイム整形
             input.addEventListener('input', () => {
                 const cursorPos = input.selectionStart;
                 const unformatted = unformat(input.value);
                 input.value = formatNumber(unformatted);
-                // カーソル位置補正（簡易）
                 input.setSelectionRange(cursorPos, cursorPos);
             });
-
-            // フォーム送信前にカンマを除去（on submit）
             input.form.addEventListener('submit', () => {
                 input.value = unformat(input.value);
             });
@@ -145,31 +137,6 @@
             // 初期化（ページロード時にも同期）
             syncCurrency();
         }
-    });
-    document.addEventListener('DOMContentLoaded', function () {
-    // 通貨欄整形（既存）
-        const inputs = document.querySelectorAll('input[name^="amount_"]');
-        inputs.forEach(input => {
-            const formatNumber = (val) => {
-                val = val.replace(/,/g, '');
-                if (!val || isNaN(val)) return '';
-                const parts = val.split('.');
-                parts[0] = Number(parts[0]).toLocaleString();
-                return parts.join('.');
-            };
-            const unformat = (val) => val.replace(/,/g, '');
-            input.value = formatNumber(input.value);
-            input.addEventListener('input', () => {
-                const cursorPos = input.selectionStart;
-                const unformatted = unformat(input.value);
-                input.value = formatNumber(unformatted);
-                input.setSelectionRange(cursorPos, cursorPos);
-            });
-            input.form.addEventListener('submit', () => {
-                input.value = unformat(input.value);
-            });
-        });
-
         // 2通貨ON/OFF切り替え
         const toggle = document.getElementById('toggleTwoCurrency');
         const secondCurrencyRows = document.querySelectorAll('[name^="currency_"][name$="_2"], [name^="amount_"][name$="_2"], [name^="ratio_6_"][name$="_2"]');
