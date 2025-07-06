@@ -742,7 +742,7 @@ def export_2currency_aggregated_excel():
         WHERE cit.item_code = 'loan_ratio'
         AND sci.ship_id = ANY(%s)
     """
-
+    
     # データ取得
     charter_totals = {}
     cost_totals    = {}
@@ -750,7 +750,6 @@ def export_2currency_aggregated_excel():
     interest_avgs  = {}
     loan_totals    = {}
     ship_names     = []
-    loan_ratios    = {}
     #fx_reserve_data = {}
 
     print("export_2currency_aggregated_excel SQL")
@@ -762,7 +761,7 @@ def export_2currency_aggregated_excel():
 
             cur.execute(sql_ship_charter, (ids,))
             charter_by_ship = dict(cur.fetchall())
-            print("CHARTER:", charter_totals)
+            print("CHARTER:", charter_by_ship)
 
             cur.execute(sql_cost, (ids,))
             cost_totals = dict(cur.fetchall())
@@ -821,7 +820,8 @@ def export_2currency_aggregated_excel():
                 else:
                     for currency in ratios:
                         ratios[currency] = 1
-
+            print("=== rows ===")
+            print(rows)
             print("=== 結果 ===")
             print(loan_ratios_by_ship)
 
@@ -886,6 +886,7 @@ def export_2currency_aggregated_excel():
         print("repay_totals.get(code, 0) : ",repay_totals.get(code, 0))
         print("interest_avgs.get(code, 0) : ",interest_avgs.get(code, 0))
         print("loan_totals.get(code, 0) : ",loan_totals.get(code, 0))
+
         if two_currency_on:
 		    # 2通貨ONのとき
             write_values(ws, 31, config['usd_range_cols'], charter_sum_by_currency.get(code, 0))
