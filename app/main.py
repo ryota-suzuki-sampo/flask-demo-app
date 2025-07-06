@@ -1038,12 +1038,16 @@ def manage_cost_items(ship_id):
             print("=== 辞書化後 cost_data ===")
             for item_id, groups in cost_data.items():
                 print(f"item_id={item_id}: {groups}")
+            
+            has_two_currency = any(len(v) >= 2 for v in cost_data.values())
+
     return render_template("ship_cost_items.html",
                            ship_id=ship_id,
                            ship_name=ship_name,
                            item_types=item_types,
                            currencies=currencies,
-                           cost_data=cost_data)
+                           cost_data=cost_data,
+                           has_two_currency=has_two_currency)
 
 def rounddown(value, digit):
     """
