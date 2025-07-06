@@ -812,7 +812,7 @@ def export_2currency_aggregated_excel():
 #            app.logger.info("FX RESERVE: %s", fx_reserve_data)
 
             cur.execute(sql_loan_ratio, (ids,))
-            rows = dict(cur.fetchall())
+            rows = cur.fetchall()
 
             # ship_id をキーにしてネスト辞書を作成
             loan_ratios_by_ship = {}
