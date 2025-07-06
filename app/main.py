@@ -880,6 +880,12 @@ def export_2currency_aggregated_excel():
             if len(ratios) >= 2:
                 two_currency_on = True
                 break
+        print("two currency : ", two_currency_on)
+        print("charter_sum_by_currency.get(code, 0) : ",charter_sum_by_currency.get(code, 0))
+        print("cost_sum_by_currency.get(code, 0) : ",cost_sum_by_currency.get(code, 0))
+        print("repay_totals.get(code, 0) : ",repay_totals.get(code, 0))
+        print("interest_avgs.get(code, 0) : ",interest_avgs.get(code, 0))
+        print("loan_totals.get(code, 0) : ",loan_totals.get(code, 0))
         if two_currency_on:
 		    # 2通貨ONのとき
             write_values(ws, 31, config['usd_range_cols'], charter_sum_by_currency.get(code, 0))
