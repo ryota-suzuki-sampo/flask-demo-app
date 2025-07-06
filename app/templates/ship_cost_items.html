@@ -122,13 +122,15 @@
             interestSelects.forEach(select => {
                 select.value = selectedValue;
                 select.setAttribute('readonly', true);
-                select.disabled = true;
+                select.readOnly = true;
+                select.disabled = false; // ← disabled をやめる
             });
 
             loanSelects.forEach(select => {
                 select.value = selectedValue;
                 select.setAttribute('readonly', true);
-                select.disabled = true;
+                select.readOnly = true;
+                select.disabled = false;
             });
         }
 
