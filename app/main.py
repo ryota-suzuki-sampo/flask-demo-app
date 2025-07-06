@@ -986,11 +986,7 @@ def manage_cost_items(ship_id):
                             loan_balance_currency_map[gno] = currency
                         if item_id == 6:
                             ratio = request.form.get(f"ratio_{item_id}_{gno}")
-                            currency = loan_balance_currency_map.get(gno)
-
-                            if not currency:
-                                currency = request.form.get(f"currency_{item_id}_{gno}")
-
+                            currency = request.form.get(f"currency_5_{gno}")  
                             amount = ratio
 
                         if currency and amount:
