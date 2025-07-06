@@ -79,7 +79,10 @@
                 {% endif %}
             {% endfor %}
         </div>
-
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="toggleTwoCurrency">
+            <label class="form-check-label" for="toggleTwoCurrency">2通貨ON</label>
+        </div>
         <div class="mt-4">
             <button type="submit" class="btn btn-success">保存</button>
             <a href="{{ url_for('list_ships') }}" class="btn btn-secondary">戻る</a>
@@ -118,8 +121,8 @@
             });
         });
         const repaymentSelect = document.querySelector('select[name="currency_3_1"]');
-        const interestSelects = document.querySelectorAll('select[name^="currency_4_"]');
-        const loanSelects = document.querySelectorAll('select[name^="currency_5_"]');
+        const interestSelects = document.querySelectorAll('select[name="currency_4_1"]');
+        const loanSelects = document.querySelectorAll('select[name="currency_5_1"]');
 
         function syncCurrency() {
             const selectedValue = repaymentSelect.value;
@@ -141,6 +144,90 @@
             repaymentSelect.addEventListener('change', syncCurrency);
             // 初期化（ページロード時にも同期）
             syncCurrency();
+        }
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+    // 通貨欄整形（既存）
+        const inputs = document.querySelectorAll('input[name^="amount_"]');
+        inputs.forEach(input => {
+            const formatNumber = (val) => {
+                val = val.replace(/,/g, '');
+                if (!val || isNaN(val)) return '';
+                const parts = val.split('.');
+                parts[0] = Number(parts[0]).toLocaleString();
+                return parts.join('.');
+            };
+            const unformat = (val) => val.replace(/,/g, '');
+            input.value = formatNumber(input.value);
+            input.addEventListener('input', () => {
+                const cursorPos = input.selectionStart;
+                const unformatted = unformat(input.value);
+                input.value = formatNumber(unformatted);
+                input.setSelectionRange(cursorPos, cursorPos);
+            });
+            input.form.addEventListener('submit', () => {
+                input.value = unformat(input.value);
+            });
+        });
+
+        // 2通貨ON/OFF切り替え
+        const toggle = document.getElementById('toggleTwoCurrency');
+        const secondCurrencyRows = document.querySelectorAll('[name^="currency_"][name$="_2"], [name^="amount_"][name$="_2"], [name^="ratio_6_"][name$="_2"]');
+
+        function updateTwoCurrency() {
+            if (toggle.checked) {
+                secondCurrencyRows.forEach(el => {
+                    el.closest('.col-md-6').style.display = 'block';
+                });
+
+                // 1通貨目をUSD固定
+                const firstCurrencySelects = document.querySelectorAll('select[name^="currency_"][name$="_1"]');
+                firstCurrencySelects.forEach(sel => {
+                    for (const opt of sel.options) {
+                        if (opt.text === 'USD') {
+                            sel.value = opt.value;
+                            break;
+                        }
+                    }
+                    sel.disabled = true;
+                });
+            } else {
+                secondCurrencyRows.forEach(el => {
+                    el.closest('.col-md-6').style.display = 'none';
+                });
+
+                // 1通貨目選択可
+                const firstCurrencySelects = document.querySelectorAll('select[name^="currency_"][name$="_1"]');
+                firstCurrencySelects.forEach(sel => {
+                    sel.disabled = false;
+                });
+            }
+        }
+
+        toggle.addEventListener('change', updateTwoCurrency);
+        updateTwoCurrency(); // 初期化
+
+        // 返済額の2通貨目を選ぶと利息・融資残高の2通貨目にもコピー
+        const repaymentSelect2 = document.querySelector('select[name="currency_1_2"]');
+        const interestSelect2 = document.querySelectorAll('select[name="currency_3_2"]');
+        const loanSelect2 = document.querySelectorAll('select[name="currency_5_2"]');
+
+        function syncSecondCurrency() {
+            if (!repaymentSelect2) return;
+            const val = repaymentSelect2.value;
+            interestSelect2.forEach(sel => {
+                sel.value = val;
+                sel.disabled = true;
+            });
+            loanSelect2.forEach(sel => {
+                sel.value = val;
+                sel.disabled = true;
+            });
+        }
+
+        if (repaymentSelect2) {
+            repaymentSelect2.addEventListener('change', syncSecondCurrency);
+            syncSecondCurrency();
         }
     });
     </script>
