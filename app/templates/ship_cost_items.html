@@ -158,7 +158,8 @@
                             break;
                         }
                     }
-                    sel.disabled = true;
+                    sel.disabled = false;
+                    sel.readOnly = true;
                 });
             } else {
                 secondCurrencyRows.forEach(el => {
@@ -169,6 +170,7 @@
                 const firstCurrencySelects = document.querySelectorAll('select[name^="currency_"][name$="_1"]');
                 firstCurrencySelects.forEach(sel => {
                     sel.disabled = false;
+                    sel.readOnly = true;
                 });
             }
         }
@@ -186,11 +188,13 @@
             const val = repaymentSelect2.value;
             interestSelect2.forEach(sel => {
                 sel.value = val;
-                sel.disabled = true;
+                sel.disabled = false;
+                sel.readOnly = true;
             });
             loanSelect2.forEach(sel => {
                 sel.value = val;
-                sel.disabled = true;
+                sel.disabled = false;
+                sel.readOnly = true;
             });
         }
 
