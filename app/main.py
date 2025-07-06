@@ -727,7 +727,7 @@ def export_2currency_aggregated_excel():
     #    SELECT cd.name AS currency,
     #           COALESCE(SUM(sd.fx_reserve_amount), 0) AS total_amount,
     #           COALESCE(AVG(sd.fx_reserve_rate), 0) AS avg_rate
-    ##      FROM ship_details sd
+    #      FROM ship_details sd
     #      JOIN currencies cd ON sd.fx_reserve_currency_id = cd.id
     #     WHERE sd.ship_id = ANY(%s)
     #     GROUP BY cd.name
@@ -735,7 +735,7 @@ def export_2currency_aggregated_excel():
 
     #8) 融資率取得
     sql_loan_ratio = """
-    SELECT sci.ship_id, c.name AS currency, sci.amount AS ratio
+        SELECT sci.ship_id, c.name AS currency, sci.amount AS ratio
         FROM ship_cost_items sci
         JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
         JOIN currencies c ON sci.currency_id = c.id
@@ -762,21 +762,13 @@ def export_2currency_aggregated_excel():
 
             cur.execute(sql_ship_charter, (ids,))
             charter_by_ship = dict(cur.fetchall())
-
-            # --- repayment 通貨単位で合計 ---
-            charter_totals = {}
-            for ship_id, amount in charter_by_ship.items():
-                repay_currency = repay_currency_by_ship.get(ship_id)
-                if not repay_currency:
-                    continue
-                charter_totals[repay_currency] = charter_totals.get(repay_currency, 0) + amount
             print("CHARTER:", charter_totals)
 
-            cur.execute(sql_cost,     (ids,))
+            cur.execute(sql_cost, (ids,))
             cost_totals = dict(cur.fetchall())
             print("COST:", cost_totals)
 
-            cur.execute(sql_repay,    (ids,))
+            cur.execute(sql_repay, (ids,))
             repay_totals = dict(cur.fetchall())
             print("REPAY:", repay_totals)
 
@@ -784,11 +776,11 @@ def export_2currency_aggregated_excel():
             interest_avgs = dict(cur.fetchall())
             print("INTEREST AVG:", interest_avgs)
 
-            cur.execute(sql_loan,     (ids,))
+            cur.execute(sql_loan, (ids,))
             loan_totals = dict(cur.fetchall())
             print("LOAN:", loan_totals)
 
-            cur.execute(sql_names,    (ids,))
+            cur.execute(sql_names, (ids,))
             ship_name_dict = dict(cur.fetchall())
             print("SHIP NAMES:", ship_names)
 
@@ -816,7 +808,6 @@ def export_2currency_aggregated_excel():
 
             # ship_id をキーにしてネスト辞書を作成
             loan_ratios_by_ship = {}
-
             for ship_id, currency, ratio in rows:
                 if ship_id not in loan_ratios_by_ship:
                     loan_ratios_by_ship[ship_id] = {}
@@ -826,13 +817,37 @@ def export_2currency_aggregated_excel():
                 if len(ratios) >= 2:
                     total = sum(ratios.values())
                     for currency, val in ratios.items():
-                        ratios[currency] = round((val / total) , 2)
+                        ratios[currency] = round((val / total), 2)
                 else:
                     for currency in ratios:
                         ratios[currency] = 1
 
             print("=== 結果 ===")
             print(loan_ratios_by_ship)
+
+            # 船単位で融資率をかけた金額を通貨別合計
+            charter_sum_by_currency = {}
+            cost_sum_by_currency = {}
+
+            for ship_id in ids:
+                ship_ratios = loan_ratios_by_ship.get(ship_id, {})
+                usd_ratio = ship_ratios.get('USD', 1)
+                other_ratio = None
+                other_code = None
+                for cur, val in ship_ratios.items():
+                    if cur != 'USD':
+                        other_ratio = val
+                        other_code = cur
+
+                charter_base = charter_by_ship.get(ship_id, 0)
+                cost_base = cost_by_ship.get(ship_id, 0)
+
+                charter_sum_by_currency['USD'] = charter_sum_by_currency.get('USD', 0) + charter_base * usd_ratio
+                cost_sum_by_currency['USD'] = cost_sum_by_currency.get('USD', 0) + cost_base * usd_ratio
+
+                if other_ratio and other_code:
+                    charter_sum_by_currency[other_code] = charter_sum_by_currency.get(other_code, 0) + charter_base * other_ratio
+                    cost_sum_by_currency[other_code] = cost_sum_by_currency.get(other_code, 0) + cost_base * other_ratio
 
     # Excelテンプレート読み込み
     print("export_2currency_aggregated_excel load Excel File")
@@ -860,27 +875,46 @@ def export_2currency_aggregated_excel():
         # 開始年月
         ws[config['start_month']] = start_month
 
+        two_currency_on = False
+        for ratios in loan_ratios_by_ship.values():
+            if len(ratios) >= 2:
+                two_currency_on = True
+                break
+        if two_currency_on:
+		    # 2通貨ONのとき
+            write_values(ws, 31, config['usd_range_cols'], charter_sum_by_currency.get(code, 0))
+            write_values(ws, 32, config['usd_range_cols'], cost_sum_by_currency.get(code, 0))
+            write_values(ws, 42, config['usd_range_cols'], repay_totals.get(code, 0))
+            write_values(ws, 45, config['usd_range_cols'], interest_avgs.get(code, 0))
+            write_values(ws, 46, config['usd_range_cols'], loan_totals.get(code, 0))
+        else:
+		    # 1通貨（通常）のときは既存設定の行（例: config の既存キー）に書き込む
+            write_values(ws, config['charter_usd_row'], config['usd_range_cols'], charter_sum_by_currency.get(code, 0))
+            write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_sum_by_currency.get(code, 0))
+            write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get(code, 0))
+            write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
+            ws.cell(*config['loan_usd_cell'], value=loan_totals.get(code, 0))
+
         # 傭船料（USD）
-        charter_fee = charter_totals.get(code, 0) * ratios[code]
-        print("Charter Fee : ",charter_fee)
-        write_values(ws, ['cconfigharter_usd_row'], config['usd_range_cols'], charter_fee)
+        #charter_fee = charter_totals.get(code, 0) * ratios[code]
+        #write_values(ws, ['cconfigharter_usd_row'], config['usd_range_cols'], charter_fee)
 
         # 船舶費（USD / 指定通貨）
-        write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
-        if sheet_name == f"収支合計_為替_{code}":
-            write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
+        #write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
+        #if sheet_name == f"収支合計_為替_{code}":
+        #    write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
 
         # 返済額（USD / 指定通貨）
-        write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
-        write_values(ws, config['repay_spec_row'], config['usd_range_cols'], repay_val)
+        #write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
+        #write_values(ws, config['repay_spec_row'], config['usd_range_cols'], repay_val)
 
         # 支払利息（USD / 指定通貨）
-        write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
-        write_values(ws, config['interest_spec_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
+        #write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
+        #write_values(ws, config['interest_spec_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
 
         # 融資残高（USD / 指定通貨）
-        ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
-        ws.cell(*config['loan_spec_cell'], value=loan_totals.get(code, 0))
+        #ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
+        #ws.cell(*config['loan_spec_cell'], value=loan_totals.get(code, 0))
 
         # 為替予約情報
         #fx_data = fx_reserve_data.get(code, {'amount': 0, 'rate': 0})
@@ -902,7 +936,7 @@ def export_2currency_aggregated_excel():
             ws_detail = wb[detail_sheet]
             # 呼び出し関数に必要情報を渡す
             usd_ship_ids = [sid for sid, curr in repay_currency_by_ship.items() if curr == 'USD']
-            write_usd_detail_sheet(start_month,ws_detail, usd_ship_ids, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_dict)
+            write_usd_detail_sheet(start_month, ws_detail, usd_ship_ids, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_dict)
 
     # 保存して返却
     wb.save(buf)
