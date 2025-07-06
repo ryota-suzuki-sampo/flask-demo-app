@@ -812,29 +812,27 @@ def export_2currency_aggregated_excel():
 #            app.logger.info("FX RESERVE: %s", fx_reserve_data)
 
             cur.execute(sql_loan_ratio, (ids,))
-            loan_ratios = dict(cur.fetchall())
+            rows = dict(cur.fetchall())
 
-    # 結果の通貨数でON/OFF判定
-    if len(loan_ratios) >= 2:
-        # 2通貨対応 ON
-        total = sum(loan_ratios.values())
-        normalized_ratios = {}
-        if total > 0:
-            for currency, val in loan_ratios.items():
-                # 正規化: 通貨ごとに (val / total) * 100
-                normalized_ratios[currency] = round((val / total) * 100, 2)
-        else:
-            # 全額0の場合はすべて0%
-            for currency in loan_ratios:
-                normalized_ratios[currency] = 0
-    else:
-        # 2通貨対応 OFF
-        normalized_ratios = {}
-        for currency, val in loan_ratios.items():
-            normalized_ratios[currency] = 100
+            # ship_id をキーにしてネスト辞書を作成
+            loan_ratios_by_ship = {}
 
-    print("=== 正規化後の融資比率 ===")
-    print(normalized_ratios)
+            for ship_id, currency, ratio in rows:
+                if ship_id not in loan_ratios_by_ship:
+                    loan_ratios_by_ship[ship_id] = {}
+                loan_ratios_by_ship[ship_id][currency] = ratio
+
+            for ship_id, ratios in loan_ratios_by_ship.items():
+                if len(ratios) >= 2:
+                    total = sum(ratios.values())
+                    for currency, val in ratios.items():
+                        ratios[currency] = round((val / total) * 100, 2)
+                else:
+                    for currency in ratios:
+                        ratios[currency] = 100
+
+            print("=== 結果 ===")
+            print(loan_ratios_by_ship)
 
     # Excelテンプレート読み込み
     print("export_2currency_aggregated_excel load Excel File")
