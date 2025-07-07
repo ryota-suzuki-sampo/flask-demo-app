@@ -365,6 +365,7 @@ EXPORT_CONFIG = {
     'interest_spec_row': 35,
     'loan_usd_cell': (17, 4),    # D17
     'loan_spec_cell': (36, 4),   # D36
+    'loan_spec2_cell': (46, 4),
     'shipname_start_cell': (5, 19),  # S5〜
     'fx_reserve_row': 12,       # 為替予約金額
     'fx_reserve_yen_row': 47,   # 金額換算（円）
@@ -881,19 +882,19 @@ def export_2currency_aggregated_excel():
                 two_currency_on = True
                 break
         print("two currency : ", two_currency_on)
-        print("charter_sum_by_currency.get(code, 0) : ",charter_sum_by_currency.get(code, 0))
-        print("cost_sum_by_currency.get(code, 0) : ",cost_sum_by_currency.get(code, 0))
+        print("charter_sum_by_currency.get(code, 0) : ",charter_sum_by_currency.get('USD', 0))
+        print("cost_sum_by_currency.get(code, 0) : ",cost_sum_by_currency.get('USD', 0))
         print("repay_totals.get(code, 0) : ",repay_totals.get(code, 0))
         print("interest_avgs.get(code, 0) : ",interest_avgs.get(code, 0))
         print("loan_totals.get(code, 0) : ",loan_totals.get(code, 0))
 
         if two_currency_on:
 		    # 2通貨ONのとき
-            write_values(ws, 31, config['usd_range_cols'], charter_sum_by_currency.get(code, 0))
-            write_values(ws, 32, config['usd_range_cols'], cost_sum_by_currency.get(code, 0))
+            write_values(ws, 31, config['usd_range_cols'], charter_sum_by_currency.get('USD', 0))
+            write_values(ws, 32, config['usd_range_cols'], cost_sum_by_currency.get('USD', 0))
             write_values(ws, 42, config['usd_range_cols'], repay_totals.get(code, 0))
             write_values(ws, 45, config['usd_range_cols'], interest_avgs.get(code, 0))
-            write_values(ws, 46, config['usd_range_cols'], loan_totals.get(code, 0))
+            ws.cell(*config['loan_spec2_cell'], value=loan_totals.get(code, 0))
         else:
 		    # 1通貨（通常）のときは既存設定の行（例: config の既存キー）に書き込む
             # 傭船料（USD）
@@ -1031,7 +1032,7 @@ def manage_cost_items(ship_id):
                     display_amt = float(amt) * 100  # ← 100倍
                 else:
                     display_amt = float(amt)
-                    
+
                 cost_data.setdefault(item_id, {})[gno] = {
                     "currency_id": curid,
                     "ratio" if item_id == 6 else "amount": display_amt
