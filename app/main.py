@@ -890,8 +890,8 @@ def export_2currency_aggregated_excel():
 
         if two_currency_on:
 		    # 2通貨ONのとき
-            write_values(ws, 31, config['usd_range_cols'], charter_sum_by_currency.get('USD', 0))
-            write_values(ws, 32, config['usd_range_cols'], cost_sum_by_currency.get('USD', 0))
+            write_values(ws, config['charter_usd_row'], config['usd_range_cols'], charter_sum_by_currency.get(code, 0))
+            write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
             write_values(ws, 42, config['usd_range_cols'], repay_totals.get(code, 0))
             write_values(ws, 45, config['usd_range_cols'], interest_avgs.get(code, 0))
             ws.cell(*config['loan_spec2_cell'], value=loan_totals.get(code, 0))
