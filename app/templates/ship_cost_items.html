@@ -90,28 +90,6 @@
     </form>
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const inputs = document.querySelectorAll('input[name^="amount_"]');
-
-        inputs.forEach(input => {
-            const formatNumber = (val) => {
-                val = val.replace(/,/g, '');
-                if (!val || isNaN(val)) return '';
-                const parts = val.split('.');
-                parts[0] = Number(parts[0]).toLocaleString();
-                return parts.join('.');
-            };
-            const unformat = (val) => val.replace(/,/g, '');
-            input.value = formatNumber(input.value);
-            input.addEventListener('input', () => {
-                const cursorPos = input.selectionStart;
-                const unformatted = unformat(input.value);
-                input.value = formatNumber(unformatted);
-                input.setSelectionRange(cursorPos, cursorPos);
-            });
-            input.form.addEventListener('submit', () => {
-                input.value = unformat(input.value);
-            });
-        });
         const repaymentSelect = document.querySelector('select[name="currency_3_1"]');
         const interestSelects = document.querySelectorAll('select[name="currency_4_1"]');
         const loanSelects = document.querySelectorAll('select[name="currency_5_1"]');
