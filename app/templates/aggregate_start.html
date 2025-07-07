@@ -21,6 +21,35 @@
     <label class="form-label">対象船舶</label>
     <ul id="ship-list" class="list-group"></ul>
   </div>
+
+  <!-- 集計実行フォーム -->
+  <form id="aggForm" method="post" action="/export_aggregated_excel" enctype="multipart/form-data">
+    <div class="mb-3">
+      <label for="start_month" class="form-label">開始年月</label>
+      <input
+        type="month"
+        class="form-control"
+        id="start_month"
+        name="start_month"
+        value="{{ now.strftime('%Y-%m') }}"
+        required
+      >
+    </div>
+    <div class="mb-3">
+      <label for="template_file" class="form-label">Excelテンプレートを選択</label>
+      <input
+        type="file"
+        class="form-control"
+        id="template_file"
+        name="template_file"
+        accept=".xlsx,.xls"
+        required
+      >
+    </div>
+    <button type="submit" class="btn btn-primary">通常集計 実行</button>
+    <a href="/ships" class="btn btn-secondary ms-2">キャンセル</a>
+  </form>
+
   <!-- 2通貨対応集計フォーム -->
   <form id="aggForm2" method="post" action="/export_2currency_aggregated_excel" enctype="multipart/form-data">
     <div class="mb-3">
@@ -46,7 +75,6 @@
       >
     </div>
     <button type="submit" class="btn btn-success">2通貨集計 実行</button>
-    <input type="hidden" id="two_currency_enabled" name="two_currency_enabled" value="off">
     <a href="/ships" class="btn btn-secondary ms-2">キャンセル</a>
   </form>
 </div>
