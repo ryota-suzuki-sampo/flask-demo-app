@@ -64,7 +64,7 @@
                                         <span class="input-group-text">融資比率</span>
                                         <input type="number" step="0.01" name="ratio_6_{{ gno }}"
                                             class="form-control"
-                                            value="{{ (cost_data.get(6, {}).get(gno, {}).ratio * 100) if cost_data.get(6, {}).get(gno, {}).ratio is not none else '' }}">
+                                            value="{% if 'ratio' in cost_data.get(6, {}).get(gno, {}) %}{{ cost_data.get(6, {}).get(gno, {}).ratio * 100 }}{% else %}{% endif %}">
                                         {% set loan_ratio_unit = item_types[5][2] %}
                                         {% if loan_ratio_unit %}
                                             <span class="input-group-text">{{ loan_ratio_unit }}</span>
