@@ -744,12 +744,12 @@ def export_2currency_aggregated_excel():
     """
     
     # データ取得
-    charter_totals = {}
-    cost_totals    = {}
-    repay_totals   = {}
-    interest_avgs  = {}
-    loan_totals    = {}
-    ship_names     = []
+    charter_by_ship = {}
+    cost_totals     = {}
+    repay_totals    = {}
+    interest_avgs   = {}
+    loan_totals     = {}
+    ship_names      = []
     #fx_reserve_data = {}
 
     print("export_2currency_aggregated_excel SQL")
@@ -896,33 +896,26 @@ def export_2currency_aggregated_excel():
             write_values(ws, 46, config['usd_range_cols'], loan_totals.get(code, 0))
         else:
 		    # 1通貨（通常）のときは既存設定の行（例: config の既存キー）に書き込む
+            # 傭船料（USD）
             write_values(ws, config['charter_usd_row'], config['usd_range_cols'], charter_sum_by_currency.get(code, 0))
-            write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_sum_by_currency.get(code, 0))
-            write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get(code, 0))
-            write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
-            ws.cell(*config['loan_usd_cell'], value=loan_totals.get(code, 0))
 
-        # 傭船料（USD）
-        #charter_fee = charter_totals.get(code, 0) * ratios[code]
-        #write_values(ws, ['cconfigharter_usd_row'], config['usd_range_cols'], charter_fee)
+            # 船舶費（USD / 指定通貨）
+            write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
+            if sheet_name == f"収支合計_為替_{code}":
+                write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
 
-        # 船舶費（USD / 指定通貨）
-        #write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
-        #if sheet_name == f"収支合計_為替_{code}":
-        #    write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
+            # 返済額（USD / 指定通貨）
+            write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
+            write_values(ws, config['repay_spec_row'], config['usd_range_cols'], repay_val)
 
-        # 返済額（USD / 指定通貨）
-        #write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
-        #write_values(ws, config['repay_spec_row'], config['usd_range_cols'], repay_val)
+            # 支払利息（USD / 指定通貨）
+            write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
+            write_values(ws, config['interest_spec_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
 
-        # 支払利息（USD / 指定通貨）
-        #write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
-        #write_values(ws, config['interest_spec_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
-
-        # 融資残高（USD / 指定通貨）
-        #ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
-        #ws.cell(*config['loan_spec_cell'], value=loan_totals.get(code, 0))
-
+            # 融資残高（USD / 指定通貨）
+            ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
+            ws.cell(*config['loan_spec_cell'], value=loan_totals.get(code, 0))
+  
         # 為替予約情報
         #fx_data = fx_reserve_data.get(code, {'amount': 0, 'rate': 0})
         #fx_amount = fx_data['amount']
