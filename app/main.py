@@ -905,15 +905,18 @@ def export_2currency_aggregated_excel():
                 write_values(ws, config['cost_spec_row'], config['usd_range_cols'], cost_totals.get(code, 0))
 
             # 返済額（USD / 指定通貨）
-            write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
+            if repay_totals.get('USD', 0) != 0:
+                write_values(ws, config['repay_usd_row'], config['usd_range_cols'], repay_totals.get('USD', 0))
             write_values(ws, config['repay_spec_row'], config['usd_range_cols'], repay_val)
 
             # 支払利息（USD / 指定通貨）
-            write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
+            if interest_avgs.get('USD', 0) != 0:
+                write_values(ws, config['interest_usd_row'], config['usd_range_cols'], interest_avgs.get('USD', 0))
             write_values(ws, config['interest_spec_row'], config['usd_range_cols'], interest_avgs.get(code, 0))
 
             # 融資残高（USD / 指定通貨）
-            ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
+            if loan_totals.get('USD', 0) != 0:
+                ws.cell(*config['loan_usd_cell'], value=loan_totals.get('USD', 0))
             ws.cell(*config['loan_spec_cell'], value=loan_totals.get(code, 0))
   
         # 為替予約情報
