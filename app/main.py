@@ -1027,9 +1027,14 @@ def manage_cost_items(ship_id):
             # 辞書化（item_type_id → {group_no → {currency_id, amount}})
             cost_data = {}
             for item_id, gno, curid, amt in rows:
+                if item_id == 4:
+                    display_amt = float(amt) * 100  # ← 100倍
+                else:
+                    display_amt = float(amt)
+                    
                 cost_data.setdefault(item_id, {})[gno] = {
                     "currency_id": curid,
-                    "ratio" if item_id == 6 else "amount": float(amt)
+                    "ratio" if item_id == 6 else "amount": display_amt
                 }
             print("=== 辞書化後 cost_data ===")
             for item_id, groups in cost_data.items():
