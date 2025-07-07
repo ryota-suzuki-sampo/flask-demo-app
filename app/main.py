@@ -832,24 +832,14 @@ def export_2currency_aggregated_excel():
 
             for ship_id in ids:
                 ship_ratios = loan_ratios_by_ship.get(ship_id, {})
-                usd_ratio = ship_ratios.get('USD', 1)
-                other_ratio = None
-                other_code = None
-                for cur, val in ship_ratios.items():
-                    if cur != 'USD':
-                        other_ratio = val
-                        other_code = cur
 
                 charter_base = charter_by_ship.get(ship_id, 0)
                 cost_base = cost_by_ship.get(ship_id, 0)
 
-                charter_sum_by_currency['USD'] = charter_sum_by_currency.get('USD', 0) + charter_base * usd_ratio
-                cost_sum_by_currency['USD'] = cost_sum_by_currency.get('USD', 0) + cost_base * usd_ratio
-
-                if other_ratio and other_code:
-                    charter_sum_by_currency[other_code] = charter_sum_by_currency.get(other_code, 0) + charter_base * other_ratio
-                    cost_sum_by_currency[other_code] = cost_sum_by_currency.get(other_code, 0) + cost_base * other_ratio
-
+                for cur_code, ratio in ship_ratios.items():
+                    charter_sum_by_currency[cur_code] = charter_sum_by_currency.get(cur_code, 0) + charter_base * ratio
+                    cost_sum_by_currency[cur_code] = cost_sum_by_currency.get(cur_code, 0) + cost_base * ratio
+                    
     # Excelテンプレート読み込み
     print("export_2currency_aggregated_excel load Excel File")
     wb = load_workbook(template_file.stream)
@@ -891,7 +881,7 @@ def export_2currency_aggregated_excel():
         if two_currency_on:
 		    # 2通貨ONのとき
             write_values(ws, config['charter_usd_row'], config['usd_range_cols'], charter_sum_by_currency.get(code, 0))
-            write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_totals.get('USD', 0))
+            write_values(ws, config['cost_usd_row'], config['usd_range_cols'], cost_sum_by_currency.get(code, 0))
             write_values(ws, 42, config['usd_range_cols'], repay_totals.get(code, 0))
             write_values(ws, 45, config['usd_range_cols'], interest_avgs.get(code, 0))
             ws.cell(*config['loan_spec2_cell'], value=loan_totals.get(code, 0))
