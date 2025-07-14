@@ -944,7 +944,7 @@ def export_2currency_aggregated_excel():
             ws_detail = wb[detail_sheet]
             # 呼び出し関数に必要情報を渡す
             usd_ship_ids = [sid for sid, curr in repay_currency_by_ship.items() if curr == 'USD']
-            write_usd_detail_sheet(start_month, ws_detail, usd_ship_ids, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_dict,two_currency_on)
+            write_usd_detail_sheet(start_month, ws_detail, usd_ship_ids, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_dict,two_currency_on,loan_ratios_by_ship)
 
     # 保存して返却
     wb.save(buf)
