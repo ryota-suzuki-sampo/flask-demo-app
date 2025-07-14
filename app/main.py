@@ -560,6 +560,8 @@ def export_aggregated_excel():
 
 def write_usd_detail_sheet(start_month,ws, ship_list, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_by_id,two_currency_on,loan_ratios_by_ship):
     row = 6
+    two_currency_row = 31
+    temp_row = 6
     for ship_id in ship_list:
         ship_name = ship_name_by_id.get(ship_id)
         if not ship_name:
@@ -573,7 +575,8 @@ def write_usd_detail_sheet(start_month,ws, ship_list, charter_by_ship, cost_by_s
 
         if two_currency_on:
             ship_ratios = loan_ratios_by_ship.get(ship_id, {})
-
+            temp_row = row
+            row = two_currency_row
             for cur_code, ratio in ship_ratios.items():
                 if cur_code == 'USD': 
                     charter = charter * ratio
@@ -607,6 +610,9 @@ def write_usd_detail_sheet(start_month,ws, ship_list, charter_by_ship, cost_by_s
         ws[f'J{row}'] = rounddown(interest_total,2)
 
         row += 1
+        if two_currency_on:
+            two_currency_row += 1
+            row = temp_row
 
 @app.route('/export_2currency_aggregated_excel', methods=['POST'])
 @login_required
