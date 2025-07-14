@@ -558,7 +558,7 @@ def export_aggregated_excel():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
-def write_usd_detail_sheet(start_month,ws, ship_list, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_by_id):
+def write_usd_detail_sheet(start_month,ws, ship_list, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_by_id,two_currency_on,loan_ratios_by_ship):
     row = 6
     for ship_id in ship_list:
         ship_name = ship_name_by_id.get(ship_id)
@@ -571,6 +571,14 @@ def write_usd_detail_sheet(start_month,ws, ship_list, charter_by_ship, cost_by_s
         repay = repay_by_ship.get(ship_id, 0)
         interest = interest_by_ship.get(ship_id, 0)
 
+        if two_currency_on:
+            ship_ratios = loan_ratios_by_ship.get(ship_id, {})
+
+            for cur_code, ratio in ship_ratios.items():
+                if cur_code == 'USD': 
+                    charter = charter * ratio
+                    cost = cost * ratio
+        
         if loan == 0 or repay == 0:
             continue
 
@@ -673,6 +681,7 @@ def export_2currency_aggregated_excel():
         JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
         JOIN currencies c ON sci.currency_id = c.id
         WHERE cit.item_code = 'repayment'
+          AND c.name = 'USD'
           AND sci.ship_id = ANY(%s)
         GROUP BY sci.ship_id
     """
@@ -693,6 +702,7 @@ def export_2currency_aggregated_excel():
         JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
         JOIN currencies c ON sci.currency_id = c.id
         WHERE cit.item_code = 'interest'
+          AND c.name = 'USD'
           AND sci.ship_id = ANY(%s)
         GROUP BY sci.ship_id
     """
@@ -713,6 +723,7 @@ def export_2currency_aggregated_excel():
         JOIN cost_item_type_table cit ON sci.item_type_id = cit.id
         JOIN currencies c ON sci.currency_id = c.id
         WHERE cit.item_code = 'loan'
+          AND c.name = 'USD'
           AND sci.ship_id = ANY(%s)
         GROUP BY sci.ship_id
     """
@@ -874,8 +885,9 @@ def export_2currency_aggregated_excel():
                 two_currency_on = True
                 break
         print("two currency : ", two_currency_on)
-        print("charter_sum_by_currency.get(code, 0) : ",charter_sum_by_currency.get('USD', 0))
-        print("cost_sum_by_currency.get(code, 0) : ",cost_sum_by_currency.get('USD', 0))
+        print("code : ", code)
+        print("charter_sum_by_currency.get(code, 0) : ",charter_sum_by_currency.get(code, 0))
+        print("cost_sum_by_currency.get(code, 0) : ",cost_sum_by_currency.get(code, 0))
         print("repay_totals.get(code, 0) : ",repay_totals.get(code, 0))
         print("interest_avgs.get(code, 0) : ",interest_avgs.get(code, 0))
         print("loan_totals.get(code, 0) : ",loan_totals.get(code, 0))
@@ -932,7 +944,7 @@ def export_2currency_aggregated_excel():
             ws_detail = wb[detail_sheet]
             # 呼び出し関数に必要情報を渡す
             usd_ship_ids = [sid for sid, curr in repay_currency_by_ship.items() if curr == 'USD']
-            write_usd_detail_sheet(start_month, ws_detail, usd_ship_ids, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_dict)
+            write_usd_detail_sheet(start_month, ws_detail, usd_ship_ids, charter_by_ship, cost_by_ship, loan_by_ship, repay_by_ship, interest_by_ship, ship_name_dict,two_currency_on)
 
     # 保存して返却
     wb.save(buf)
