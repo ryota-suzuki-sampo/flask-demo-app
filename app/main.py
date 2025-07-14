@@ -837,6 +837,8 @@ def export_2currency_aggregated_excel():
                 cost_base = cost_by_ship.get(ship_id, 0)
 
                 for cur_code, ratio in ship_ratios.items():
+                    print("cur_code : ",cur_code)
+                    print("ratio : ",ratio)
                     charter_sum_by_currency[cur_code] = charter_sum_by_currency.get(cur_code, 0) + charter_base * ratio
                     cost_sum_by_currency[cur_code] = cost_sum_by_currency.get(cur_code, 0) + cost_base * ratio
                     
